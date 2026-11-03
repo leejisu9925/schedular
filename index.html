@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>✨🐥🍀 - 통합 스케줄러 & 투두</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -81,6 +81,15 @@
     .plate-well-sm { border-radius: 3px; }
     .plate-well.well-sel { outline: 2px solid #1e293b; outline-offset: 1px; }
 
+    /* ===== 모바일 ===== */
+    body { overflow-x: hidden; }
+    @media (max-width: 767px) {
+      /* iOS에서 입력칸을 누를 때 화면이 확대되지 않도록 16px 유지 */
+      input:not([type=checkbox]):not([type=radio]):not([type=color]), select, textarea { font-size: 16px !important; }
+      .mobile-safe-top { padding-top: max(0.75rem, env(safe-area-inset-top)); }
+    }
+    body.sidebar-open { overflow: hidden; }
+
     .current-time-indicator {
       position: absolute;
       left: 0;
@@ -95,11 +104,14 @@
 <body class="min-h-screen flex bg-white text-slate-800">
 
   <!-- 좌측 내비게이터 바 (연회색 톤 적용) -->
-  <aside class="w-64 bg-[#f8fafc] border-r border-slate-200 flex flex-col justify-between p-6 sticky top-0 h-screen z-30">
+  <aside id="appSidebar" class="fixed md:sticky inset-y-0 left-0 md:top-0 w-64 max-w-[85vw] flex-shrink-0 bg-[#f8fafc] border-r border-slate-200 flex flex-col justify-between gap-6 p-4 md:p-6 h-[100dvh] md:h-screen overflow-y-auto z-50 md:z-30 -translate-x-full md:translate-x-0 transition-transform duration-200">
     <div>
-      <div class="mb-5">
-        <h1 class="text-base font-black tracking-wider text-slate-800">✨🐥🍀</h1>
-        <p class="text-[11px] text-slate-500 mt-0.5">통합 스케줄러 & To do list</p>
+      <div class="mb-5 flex items-start justify-between gap-2">
+        <div>
+          <h1 class="text-base font-black tracking-wider text-slate-800">✨🐥🍀</h1>
+          <p class="text-[11px] text-slate-500 mt-0.5">통합 스케줄러 & To do list</p>
+        </div>
+        <button onclick="closeSidebar()" class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="메뉴 닫기"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
       <div class="relative mb-6">
@@ -166,8 +178,21 @@
     </div>
   </aside>
 
+  <!-- 모바일 메뉴 배경 -->
+  <div id="sidebarOverlay" onclick="closeSidebar()" class="fixed inset-0 bg-slate-900/40 z-40 hidden md:hidden"></div>
+
   <!-- 메인 컨텐츠 영역 -->
-  <main class="flex-1 p-8 overflow-y-auto max-h-screen">
+  <main class="flex-1 min-w-0 p-4 md:p-8 md:overflow-y-auto md:max-h-screen">
+
+    <!-- 모바일 상단바 -->
+    <div class="md:hidden sticky top-0 z-30 -mx-4 -mt-4 mb-4 px-4 py-3 mobile-safe-top bg-white/95 backdrop-blur border-b border-slate-200 flex items-center gap-3">
+      <button onclick="openSidebar()" class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700" aria-label="메뉴 열기"><i class="fa-solid fa-bars"></i></button>
+      <div class="flex-1 min-w-0">
+        <p class="text-[10px] text-slate-400 leading-none">✨🐥🍀</p>
+        <p id="mobileTabTitle" class="text-sm font-bold text-slate-800 truncate">Home</p>
+      </div>
+      <button onclick="openScheduleModal()" class="h-9 px-3 flex-shrink-0 rounded-xl bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-plus"></i> 추가</button>
+    </div>
     
 
     <!-- Context Menu -->
@@ -186,7 +211,7 @@
     <!-- 1. [탭 1] 홈 화면 (RECENT 메모 삭제, 캘린더 및 TO-DO LIST 요약을 메인 상단으로 배치) -->
     <section id="tab-content-home" class="space-y-6">
       <div id="homeBackupBanner" class="hidden">
-        <div class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2.5 text-xs font-semibold">
+        <div class="flex flex-wrap items-center justify-between gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2.5 text-xs font-semibold">
           <span id="homeBackupBannerText">백업해 두세요.</span>
           <div class="flex items-center gap-1.5 flex-shrink-0">
             <button onclick="snoozeBackupBanner()" class="px-2.5 py-1 rounded-lg text-[11px] text-amber-700 hover:bg-amber-100 transition">내일 다시</button>
@@ -195,13 +220,13 @@
         </div>
       </div>
 
-      <div class="soft-card p-8 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 border border-slate-300 rounded-2xl relative overflow-hidden shadow-xs">
+      <div class="soft-card p-5 md:p-8 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 border border-slate-300 rounded-2xl relative overflow-hidden shadow-xs">
         <div class="max-w-xl">
           <span class="text-[11px] font-bold tracking-widest text-slate-500 uppercase">🤍 DASHBOARD</span>
-          <h3 class="text-2xl font-black mt-1 mb-2">
+          <h3 class="text-xl md:text-2xl font-black mt-1 mb-2">
             오늘은 <span id="homeTodayCount" class="underline text-slate-700">0개</span> 일정이 있어요.
           </h3>
-          <p class="text-xs text-slate-600 mb-6">캘린더 일정 및 주간 투두를 확인하고 알찬 하루를 보내세요!</p>
+          <p class="text-xs text-slate-600 mb-4 md:mb-6">캘린더 일정 및 주간 투두를 확인하고 알찬 하루를 보내세요!</p>
           
           <div class="flex flex-wrap gap-2">
             <button onclick="switchTab('weekly')" class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
@@ -254,7 +279,7 @@
 
     <!-- 2. [탭 2] 캘린더 화면 (배경 흰색, 당일 연회색, 토요일 파란색, 일요일 빨간색, 공휴일 반영) -->
     <section id="tab-content-calendar" class="space-y-6 hidden">
-      <div class="bg-white border border-slate-200 shadow-xs rounded-2xl p-6" onclick="hideContextMenu()">
+      <div class="bg-white border border-slate-200 shadow-xs rounded-2xl p-4 md:p-6" onclick="hideContextMenu()">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <div class="flex items-center gap-3">
             <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -288,14 +313,15 @@
           <div class="text-slate-600 py-1">금</div>
           <div class="text-blue-500 py-1">토</div>
         </div>
-        <div id="calendarGrid" class="grid grid-cols-7 gap-1.5"></div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-1.5"></div>
+        <div id="calendarDayAgenda" class="md:hidden mt-4"></div>
       </div>
     </section>
 
     <!-- 3. [탭 3] 주간 & 일일 스케줄러 (Weekly Schedule, 설명 삭제, 아이콘 📅, 정확한 겹침 면적 조절) -->
     <section id="tab-content-weekly" class="space-y-8 hidden">
       <!-- 주간 타임라인 스케줄러 -->
-      <div class="soft-card rounded-2xl p-6 bg-white border border-slate-200">
+      <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <div>
             <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -304,8 +330,8 @@
             </h3>
           </div>
 
-          <div class="flex items-center gap-2">
-            <div class="flex items-center gap-1.5 bg-[#f8fafc] px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <div class="hidden md:flex items-center gap-1.5 bg-[#f8fafc] px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
               <span class="font-bold text-slate-600"><i class="fa-solid fa-clock-rotate-left mr-1"></i>시작 시간:</span>
               <select id="timeJumpSelect" onchange="scrollToSelectedHour(this.value)" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none font-bold text-slate-700 cursor-pointer">
                 <option value="6">06:00</option>
@@ -316,24 +342,27 @@
               </select>
             </div>
 
-            <button onclick="changeWeek(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200">
-              <i class="fa-solid fa-chevron-left text-sm"></i>
-            </button>
-            <span id="weekRangeText" class="text-xs font-semibold text-slate-700 px-3">-</span>
-            <button onclick="changeWeek(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200">
-              <i class="fa-solid fa-chevron-right text-sm"></i>
-            </button>
+            <div class="flex items-center gap-1">
+              <button onclick="changeWeek(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200">
+                <i class="fa-solid fa-chevron-left text-sm"></i>
+              </button>
+              <span id="weekRangeText" class="text-xs font-semibold text-slate-700 px-3">-</span>
+              <button onclick="changeWeek(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200">
+                <i class="fa-solid fa-chevron-right text-sm"></i>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white user-select-none relative">
+        <p class="md:hidden text-[11px] text-slate-400 mb-2"><i class="fa-solid fa-arrows-left-right mr-1"></i>좌우로 밀어서 다른 요일을 볼 수 있어요</p>
+        <div id="weeklyScrollX" class="overflow-x-auto border border-slate-200 rounded-xl bg-white user-select-none relative">
           <div id="headerDragHighlightOverlay" class="drag-selection-highlight hidden"></div>
           <div class="min-w-[700px]">
             <div id="weeklyHeaderGrid" class="grid grid-cols-8 border-b border-slate-200 bg-[#f8fafc] text-center text-xs font-bold text-slate-600 sticky top-0 z-10">
-              <div class="py-3 border-r border-slate-200 text-slate-400">시간</div>
+              <div class="py-3 border-r border-slate-200 text-slate-400 sticky left-0 z-[15] bg-[#f8fafc]">시간</div>
             </div>
 
-            <div class="max-h-[420px] overflow-y-auto relative" id="weeklyTimeGridContainer">
+            <div class="md:max-h-[420px] md:overflow-y-auto relative" id="weeklyTimeGridContainer">
               <div id="dragHighlightOverlay" class="drag-selection-highlight hidden"></div>
               <div id="weeklyTimeGrid" class="grid grid-cols-8 relative"></div>
             </div>
@@ -342,9 +371,9 @@
       </div>
 
       <!-- Weekly To Do List 섹션 -->
-      <div class="soft-card rounded-2xl p-6 bg-white border border-slate-200">
+      <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center justify-center gap-3">
             <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
               <span>⏰</span>
               <span>Weekly To Do List</span>
@@ -378,7 +407,7 @@
 
     <!-- 4. [탭 4] 실험 Protocol 목록 (아이콘 🔬, 메뉴 카운터 제거, 카드 클릭 상세 보기 및 수정 기능) -->
     <section id="tab-content-protocol" class="space-y-6 hidden">
-      <div class="soft-card rounded-2xl p-6 space-y-6 bg-white border border-slate-200">
+      <div class="soft-card rounded-2xl p-4 md:p-6 space-y-6 bg-white border border-slate-200">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 gap-4">
           <div>
             <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -392,7 +421,7 @@
 
         <!-- 카테고리 관리 태그 바 -->
         <div class="bg-[#f8fafc] p-4 rounded-xl border border-slate-200 space-y-3">
-          <div class="flex justify-between items-center">
+          <div class="flex flex-wrap justify-between items-center gap-2">
             <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <i class="fa-solid fa-tags text-slate-500"></i> 등록된 카테고리 관리
             </h4>
@@ -410,11 +439,11 @@
 
     <!-- 5. [탭 5] Experiment Design: 플레이트 맵 -->
     <section id="tab-content-design" class="space-y-6 hidden">
-      <div class="soft-card rounded-2xl p-6 bg-white border border-slate-200 space-y-5">
+      <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200 space-y-5">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200 pb-4">
           <div>
             <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>🧫</span> 플레이트 맵</h3>
-            <p class="text-xs text-slate-500 mt-0.5">오른쪽에서 그룹을 고른 뒤 웰을 클릭하거나 드래그하세요. 행(A, B…)·열 번호를 누르면 한 줄 전체가 칠해져요.</p>
+            <p class="text-xs text-slate-500 mt-0.5">그룹을 고른 뒤 웰을 클릭하거나 드래그하세요. 행(A, B…)·열 번호를 누르면 한 줄 전체가 칠해져요.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <select id="plateSelect" onchange="selectPlate(this.value)" class="border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none font-bold max-w-[14rem]"></select>
@@ -436,7 +465,7 @@
               <button onclick="clearPlate()" class="text-xs font-bold text-slate-500 hover:text-red-500 px-2 py-2"><i class="fa-solid fa-eraser mr-1"></i>전체 지우기</button>
             </div>
             <div class="overflow-x-auto pb-1">
-              <div id="plateGrid" class="grid gap-[3px] user-select-none min-w-[560px]"></div>
+              <div id="plateGrid" class="grid gap-[3px] user-select-none"></div>
             </div>
             <textarea id="plateMemoInput" onchange="updatePlateMemo(this.value)" rows="2" placeholder="메모 (세포주, 분주 일자, 처리 조건, 배양 시간 등)" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300"></textarea>
           </div>
@@ -457,7 +486,7 @@
     <!-- 6. [탭 6] Calculators -->
     <section id="tab-content-calc" class="space-y-6 hidden">
       <!-- 희석 계산기 -->
-      <div class="soft-card rounded-2xl p-6 bg-white border border-slate-200 space-y-4">
+      <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200 space-y-4">
         <div>
           <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>🧪</span> 희석 계산기</h3>
           <p class="text-xs text-slate-500 mt-0.5">C1V1 = C2V2 · Stock과 목표 농도의 단위가 달라도 자동으로 환산해요</p>
@@ -489,7 +518,7 @@
       </div>
 
       <!-- 몰농도 ↔ 질량 -->
-      <div class="soft-card rounded-2xl p-6 bg-white border border-slate-200 space-y-4">
+      <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200 space-y-4">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>⚖️</span> 몰농도 ↔ 질량 변환</h3>
@@ -532,7 +561,7 @@
       </div>
 
       <!-- Cell seeding 계산기 -->
-      <div class="soft-card rounded-2xl p-6 bg-white border border-slate-200 space-y-5">
+      <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200 space-y-5">
         <div>
           <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>🧫</span> Cell Seeding 계산기</h3>
           <p class="text-xs text-slate-500 mt-0.5">세포 농도를 넣고 웰당 세포 수와 분주 부피를 정하면, 섞을 세포 현탁액과 배지 양을 계산해요</p>
@@ -541,7 +570,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <!-- 1. 세포 농도 -->
           <div class="bg-[#f8fafc] border border-slate-200 rounded-xl p-4 space-y-3">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h4 class="text-xs font-bold text-slate-700">① 세포 농도</h4>
               <div class="flex bg-white border border-slate-200 rounded-lg p-0.5 text-[11px] font-bold">
                 <label class="cursor-pointer"><input type="radio" name="seedMode" value="direct" checked onchange="onSeedModeChange()" class="peer hidden"><span class="block px-2.5 py-1 rounded-md peer-checked:bg-slate-800 peer-checked:text-white text-slate-500">직접 입력</span></label>
@@ -628,7 +657,7 @@
       </div>
 
       <!-- Doubling time / 계대 -->
-      <div class="soft-card rounded-2xl p-6 bg-white border border-slate-200 space-y-5">
+      <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200 space-y-5">
         <div>
           <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>⏱</span> Doubling Time · 계대 계산</h3>
           <p class="text-xs text-slate-500 mt-0.5">지수 성장기 기준 추정치예요. lag phase나 confluence 근처의 성장 둔화는 반영되지 않아요.</p>
@@ -662,7 +691,7 @@
 
           <div class="bg-[#f8fafc] border border-slate-200 rounded-xl p-4 space-y-3">
             <h4 class="text-xs font-bold text-slate-700">② 분주 수 역산 · 계대 계획</h4>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">Doubling time (시간)</label>
                 <input id="ppDT" type="number" step="any" min="0" oninput="updatePassagePlan()" placeholder="예: 24" class="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
@@ -699,7 +728,7 @@
 
   <!-- MODAL 1: 일정 등록 / 수정 모달 (1분 단위 시간 설정 지원) -->
   <div id="scheduleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
         <h3 class="text-lg font-bold text-slate-800" id="scheduleModalTitle">계획 등록</h3>
         <button onclick="closeScheduleModal()" class="text-slate-400 hover:text-slate-600 p-1">
@@ -727,7 +756,7 @@
         </div>
 
         <!-- 1분 단위 시간 설정 (시, 분 입력방식) -->
-        <div class="grid grid-cols-2 gap-3 p-3 bg-[#f8fafc] rounded-xl border border-slate-200" id="timeSelectionWrapper">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-[#f8fafc] rounded-xl border border-slate-200" id="timeSelectionWrapper">
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>시작 시간 (1분 단위)</label>
             <div class="flex gap-1.5">
@@ -770,9 +799,9 @@
         </div>
 
         <div>
-          <label class="flex items-center gap-2 text-xs font-bold text-slate-700 mb-3 cursor-pointer bg-red-50/60 border border-red-200 rounded-xl px-3 py-2">
+          <label class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-700 mb-3 cursor-pointer bg-red-50/60 border border-red-200 rounded-xl px-3 py-2">
             <input type="checkbox" id="schedDeadlineInput" class="rounded">
-            <span>⏳ 마감일로 표시</span>
+            <span class="whitespace-nowrap">⏳ 마감일로 표시</span>
             <span class="font-normal text-[11px] text-slate-500">홈 D-day에 표시되고 마감 알림을 받아요</span>
           </label>
           <label class="block text-xs font-bold text-slate-600 mb-1.5">형광펜 색상</label>
@@ -800,7 +829,7 @@
 
   <!-- MODAL 2: 일정 상세 보기 -->
   <div id="scheduleDetailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-4 md:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-start border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2">
           <div id="detailColorBadge" class="w-3.5 h-3.5 rounded-full border border-black/10"></div>
@@ -844,7 +873,7 @@
 
   <!-- MODAL 3: 세부 계획 추가 모달 -->
   <div id="dailySubTaskModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-4 md:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-200 pb-3">
         <h3 class="text-base font-bold text-slate-800">세부 계획 추가</h3>
         <button onclick="closeDailySubTaskModal()" class="text-slate-400 hover:text-slate-600 p-1">
@@ -868,7 +897,7 @@
 
   <!-- MODAL 4: 실험 Protocol 등록 및 수정 모달 -->
   <div id="protocolModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
         <h3 class="text-lg font-bold text-slate-800" id="protocolModalTitle"><span>🔬</span> 실험 Protocol 등록</h3>
         <button onclick="closeProtocolModal()" class="text-slate-400 hover:text-slate-600 p-1">
@@ -925,7 +954,7 @@
 
   <!-- MODAL 5: 실험 Protocol 상세 보기 모달 -->
   <div id="protocolDetailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2">
           <span id="detailProtoCatBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-md border border-slate-200"></span>
@@ -970,7 +999,7 @@
 
   <!-- MODAL 6: 카테고리 추가/삭제/색상 관리 모달 -->
   <div id="categoryManageModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-4 md:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-200 pb-3">
         <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-tags text-slate-600 mr-1.5"></i> 카테고리 추가 및 색상 지정</h3>
         <button onclick="closeCategoryManageModal()" class="text-slate-400 hover:text-slate-600 p-1">
@@ -999,11 +1028,11 @@
 
 
   <!-- 검색 결과 패널 -->
-  <div id="searchResultsPanel" class="fixed left-[17rem] top-24 w-[26rem] max-w-[calc(100vw-18rem)] max-h-[70vh] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 text-xs hidden"></div>
+  <div id="searchResultsPanel" class="fixed left-3 right-3 top-36 md:left-[17rem] md:right-auto md:top-24 md:w-[26rem] md:max-w-[calc(100vw-18rem)] max-h-[60vh] md:max-h-[70vh] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl z-[60] text-xs hidden"></div>
 
   <!-- MODAL 7: 반복 일정 적용 범위 -->
   <div id="seriesScopeModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-2xl space-y-3">
+    <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
       <h3 id="seriesScopeTitle" class="text-sm font-bold text-slate-800">반복 일정 수정</h3>
       <p class="text-[11px] text-slate-500">어디까지 적용할까요?</p>
       <div class="space-y-2">
@@ -1019,7 +1048,7 @@
 
   <!-- MODAL 8: 주간 업무 요약 -->
   <div id="weeklySummaryModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-3">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-4 md:p-6 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-200 pb-3">
         <h3 class="text-base font-bold text-slate-800">📝 주간 업무 요약</h3>
         <button onclick="closeWeeklySummaryModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -1038,7 +1067,7 @@
 
   <!-- MODAL 9: 당일 인쇄 -->
   <div id="printModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full p-4 md:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-200 pb-3">
         <h3 class="text-base font-bold text-slate-800">🖨 일정 인쇄</h3>
         <button onclick="closePrintModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -1065,7 +1094,7 @@
   <!-- 화면 알림 -->
   <!-- MODAL: 백업 / 복원 -->
   <div id="backupModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-200 pb-3">
         <h3 class="text-base font-bold text-slate-800">💾 백업 / 복원</h3>
         <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -1112,7 +1141,7 @@
     </div>
   </div>
 
-  <div id="toastContainer" class="fixed top-4 right-4 z-[70] space-y-2"></div>
+  <div id="toastContainer" class="fixed top-4 right-4 left-4 md:left-auto z-[70] space-y-2 flex flex-col items-end"></div>
 
   <!-- JavaScript -->
   <script>
@@ -1310,6 +1339,10 @@
       const titles = { home: 'Home', calendar: 'Calendar', weekly: 'Weekly Schedule', protocol: 'Protocols', design: 'Plate Design', calc: 'Calculators' };
       const topTitleEl = document.getElementById('topNavTitleText');
       if (topTitleEl) topTitleEl.innerText = titles[tabId] || '대시보드';
+      const mobileTitleEl = document.getElementById('mobileTabTitle');
+      if (mobileTitleEl) mobileTitleEl.innerText = titles[tabId] || 'Home';
+      closeSidebar();
+      if (window.innerWidth < 768) window.scrollTo(0, 0);
 
       const actionButtonsWrapper = document.getElementById('headerActionButtonsWrapper');
       if (!actionButtonsWrapper) { renderAll(); return; }
@@ -1320,6 +1353,34 @@
       }
 
       renderAll();
+    }
+
+    function openSidebar() {
+      document.getElementById('appSidebar').classList.remove('-translate-x-full');
+      document.getElementById('appSidebar').classList.add('translate-x-0');
+      document.getElementById('sidebarOverlay').classList.remove('hidden');
+      document.body.classList.add('sidebar-open');
+    }
+
+    function closeSidebar() {
+      const sb = document.getElementById('appSidebar');
+      if (!sb) return;
+      sb.classList.add('-translate-x-full');
+      sb.classList.remove('translate-x-0');
+      document.getElementById('sidebarOverlay').classList.add('hidden');
+      document.body.classList.remove('sidebar-open');
+    }
+
+    // 모바일에서 주간 시간표를 선택한 요일 위치로 스크롤
+    let lastWeeklyScrollKey = null;
+    function syncWeeklyMobileScroll() {
+      if (window.innerWidth >= 768 || state.currentTab !== 'weekly') return;
+      if (lastWeeklyScrollKey === state.selectedDate) return;
+      const box = document.getElementById('weeklyScrollX');
+      if (!box || !box.scrollWidth) return;
+      lastWeeklyScrollKey = state.selectedDate;
+      const idx = getWeekDays(state.selectedDate).findIndex(d => formatDateString(d) === state.selectedDate);
+      box.scrollLeft = Math.max(0, idx * (box.scrollWidth / 8));
     }
 
     function changeTodoListWeek(offset) {
@@ -1336,6 +1397,7 @@
       renderHomeContent();
       renderCalendar();
       renderWeeklyScheduler();
+      syncWeeklyMobileScroll();
       renderWeeklyTodoList();
       renderProtocolList();
       renderCategoryFilterTags();
@@ -1447,7 +1509,7 @@
 
       for (let i = 0; i < firstDay; i++) {
         const emptyCell = document.createElement('div');
-        emptyCell.className = 'min-h-[130px] border border-transparent';
+        emptyCell.className = 'min-h-[56px] md:min-h-[130px] border border-transparent';
         gridContainer.appendChild(emptyCell);
       }
 
@@ -1469,24 +1531,28 @@
 
         // 캘린더 배경 흰색, 당일 배경 연회색 (#f1f5f9)
         let bgClass = isToday ? 'bg-[#f1f5f9] border-slate-300 font-bold' : isSelected ? 'bg-slate-50 border-slate-400 ring-2 ring-slate-300/50' : 'bg-white border-slate-200 hover:bg-slate-50';
-        cell.className = `min-h-[130px] border rounded-xl p-1.5 flex flex-col justify-between cursor-pointer transition relative overflow-hidden ${bgClass}`;
+        cell.className = `min-h-[56px] md:min-h-[130px] border rounded-lg md:rounded-xl p-1 md:p-1.5 flex flex-col md:justify-between cursor-pointer transition relative overflow-hidden ${bgClass}`;
 
         // 요일별 색상 (토요일 파란색, 일요일 및 공휴일 빨간색)
         let numColorClass = 'text-slate-700';
         if (dayOfWeek === 0 || holidayName) numColorClass = 'text-red-500';
         else if (dayOfWeek === 6) numColorClass = 'text-blue-500';
 
-        let holidayLabelHtml = holidayName ? `<span class="text-[11px] font-bold bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-200 truncate">${holidayName}</span>` : '';
+        let holidayLabelHtml = holidayName ? `<span class="hidden md:inline-block text-[11px] font-bold bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-200 truncate">${holidayName}</span>` : '';
 
         let topRowHtml = `
           <div class="flex justify-between items-center w-full mb-1">
             ${holidayLabelHtml}
-            <span class="text-[10px] text-slate-400 font-normal ml-auto mr-1">${daySchedules.length > 0 ? `${daySchedules.length}건` : ''}</span>
-            <span class="text-xs font-bold ${numColorClass}">${day}</span>
+            <span class="hidden md:inline text-[10px] text-slate-400 font-normal ml-auto mr-1">${daySchedules.length > 0 ? `${daySchedules.length}건` : ''}</span>
+            <span class="text-xs font-bold ${numColorClass} mx-auto md:mx-0">${day}</span>
           </div>
         `;
 
-        let barsHtml = `<div class="space-y-1 w-full overflow-y-auto max-h-[90px] flex-1">`;
+        const dotsHtml = daySchedules.length ? `<div class="md:hidden flex flex-wrap justify-center items-center gap-0.5 mt-0.5">
+            ${daySchedules.slice(0, 4).map(s => `<span class="w-1.5 h-1.5 rounded-full ring-1 ring-black/10" style="background-color: ${s.color || '#fde047'}"></span>`).join('')}
+            ${daySchedules.length > 4 ? `<span class="text-[8px] leading-none text-slate-400">+${daySchedules.length - 4}</span>` : ''}
+          </div>` : '';
+        let barsHtml = dotsHtml + `<div class="hidden md:block space-y-1 w-full overflow-y-auto max-h-[90px] flex-1">`;
         daySchedules.forEach(sched => {
           const bgHex = sched.color || '#fde047';
           barsHtml += `
@@ -1504,6 +1570,34 @@
         cell.innerHTML = topRowHtml + barsHtml;
         gridContainer.appendChild(cell);
       }
+      renderCalendarDayAgenda();
+    }
+
+    // 모바일: 캘린더 아래에 선택한 날짜의 일정 목록
+    function renderCalendarDayAgenda() {
+      const agenda = document.getElementById('calendarDayAgenda');
+      if (!agenda) return;
+      const sel = state.selectedDate;
+      const [sy, sm, sd] = sel.split('-').map(Number);
+      const holiday = getKoreanHolidayName(sy, sm, sd);
+      const items = state.schedules
+        .filter(s => sel >= s.startDate && sel <= s.endDate)
+        .sort((a, b) => ((a.startHour ?? -1) * 60 + (a.startMin || 0)) - ((b.startHour ?? -1) * 60 + (b.startMin || 0)));
+      agenda.innerHTML = `
+        <div class="border-t border-slate-200 pt-3">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-sm font-bold text-slate-800">${getKoreanDateLabel(sel)}${holiday ? ` <span class="text-red-500 text-xs">${holiday}</span>` : ''}</p>
+            <button onclick="openScheduleModal('${sel}')" class="text-xs font-bold text-slate-700 bg-[#f1f5f9] border border-slate-300 rounded-lg px-2.5 py-1"><i class="fa-solid fa-plus text-[10px] mr-1"></i>추가</button>
+          </div>
+          ${items.length ? items.map(s => `
+            <button onclick="openDetailModal('${s.id}')" class="w-full text-left flex items-stretch gap-2.5 bg-white border border-slate-200 rounded-xl px-3 py-2.5 mb-1.5">
+              <span class="w-1.5 rounded-full flex-shrink-0" style="background-color: ${s.color || '#fde047'}"></span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-semibold truncate ${isDone(s) ? 'line-through text-slate-400' : 'text-slate-800'}">${s.isDeadline ? '⏳ ' : ''}${escapeHtml(s.title)}</span>
+                <span class="block text-[11px] text-slate-400">${scheduleTimeText(s)}</span>
+              </span>
+            </button>`).join('') : '<p class="text-xs text-slate-400 text-center py-4">이 날은 등록된 일정이 없어요.</p>'}
+        </div>`;
     }
 
     function showContextMenu(e, dateStr) {
@@ -1565,7 +1659,7 @@
       const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
       const todayStr = formatDateString(new Date());
 
-      let headerContent = `<div class="py-3 border-r border-slate-200 text-slate-400 flex items-center justify-center">시간</div>`;
+      let headerContent = `<div class="py-3 border-r border-slate-200 text-slate-400 flex items-center justify-center sticky left-0 z-[15] bg-[#f8fafc]">시간</div>`;
       
       weekDays.forEach((d, idx) => {
         const dStr = formatDateString(d);
@@ -1612,7 +1706,7 @@
 
       for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
         const hourLabel = document.createElement('div');
-        hourLabel.className = 'time-grid-slot border-r border-slate-200 text-[11px] text-slate-400 flex items-center justify-center font-medium bg-[#f8fafc]';
+        hourLabel.className = 'time-grid-slot border-r border-slate-200 text-[11px] text-slate-400 flex items-center justify-center font-medium bg-[#f8fafc] sticky left-0 z-[15]';
         hourLabel.innerText = `${String(hour).padStart(2, '0')}:00`;
         timeGrid.appendChild(hourLabel);
 
@@ -1971,10 +2065,10 @@
         else if (idx === 6) headerColorClass = 'text-blue-600';
 
         const dayCard = document.createElement('div');
-        dayCard.className = `soft-card rounded-2xl p-5 border bg-white ${isToday ? 'border-slate-400 ring-1 ring-slate-300' : 'border-slate-200'}`;
+        dayCard.className = `soft-card rounded-2xl p-3 md:p-5 border bg-white ${isToday ? 'border-slate-400 ring-1 ring-slate-300' : 'border-slate-200'}`;
 
         let dayHtml = `
-          <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 mb-4">
             <div class="flex items-center gap-2">
               <span class="text-base font-bold ${headerColorClass}">
                 ${getKoreanDateLabel(dateStr)} ${holidayName ? `(${holidayName})` : ''}
@@ -3470,6 +3564,7 @@
       const groupMap = Object.fromEntries(plate.groups.map(g => [g.id, g]));
       const grid = document.getElementById('plateGrid');
       grid.style.gridTemplateColumns = `22px repeat(${spec.cols}, minmax(0, 1fr))`;
+      grid.style.minWidth = plate.type === 384 ? '560px' : '300px';
       let html = `<div class="plate-head" title="전체 칠하기" onclick="paintPlateRange(0, 0, ${spec.rows - 1}, ${spec.cols - 1})"><i class="fa-solid fa-border-all"></i></div>`;
       for (let c = 0; c < spec.cols; c++) {
         html += `<div class="plate-head py-1" onclick="paintPlateRange(0, ${c}, ${spec.rows - 1}, ${c})">${c + 1}</div>`;
@@ -3754,7 +3849,7 @@
     function showToast(title, body) {
       const wrap = document.getElementById('toastContainer');
       const el = document.createElement('div');
-      el.className = 'bg-slate-800 text-white rounded-xl shadow-2xl px-4 py-3 w-72 text-xs space-y-1';
+      el.className = 'bg-slate-800 text-white rounded-xl shadow-2xl px-4 py-3 w-full max-w-xs md:w-72 text-xs space-y-1';
       el.innerHTML = `<div class="flex justify-between items-start gap-2"><p class="font-bold">${escapeHtml(title)}</p><button class="text-slate-400 hover:text-white">✕</button></div>
         <p class="text-slate-300 whitespace-pre-line">${escapeHtml(body)}</p>`;
       el.querySelector('button').onclick = () => el.remove();
