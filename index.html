@@ -767,6 +767,10 @@
           <input type="checkbox" id="schedAllDayInput" class="rounded" onchange="setAllDayMode(this.checked)">
           <span>종일 (시간 없음)</span>
         </label>
+        <label id="schedCheckableRow" class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer w-fit">
+          <input type="checkbox" id="schedCheckableInput" class="rounded" onchange="if (this.checked) setAllDayMode(true)">
+          <span>체크할 수 있는 할 일로 등록 (시간 없이)</span>
+        </label>
 
         <!-- 1분 단위 시간 설정 (시, 분 입력방식) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-[#f8fafc] rounded-xl border border-slate-200" id="timeSelectionWrapper">
@@ -2146,7 +2150,7 @@
 
     // 종일/다일 일정은 완료 개념이 없어서 체크박스를 만들지 않는다.
     // 단, '마감' 일정은 완료 처리로 마감 알림을 끄기 때문에 체크박스를 유지한다.
-    function isCheckable(s) { return s.startHour !== undefined || !!s.isDeadline; }
+    function isCheckable(s) { return s.startHour !== undefined || !!s.isDeadline || !!s.checkable; }
     function isDone(s) { return isCheckable(s) && !!s.completed; }
 
     function renderWeeklyTodoList() {
@@ -2160,10 +2164,11 @@
         const isToday = (dateStr === formatDateString(new Date()));
         const holidayName = getKoreanHolidayName(d.getFullYear(), d.getMonth() + 1, d.getDate());
         const daySchedules = state.schedules.filter(s => dateStr >= s.startDate && dateStr <= s.endDate);
-        const multiDayDaySchedules = daySchedules.filter(s => s.startHour === undefined);
+        const byOrd = (a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9);   // 직접 정한 순서(ord)가 있으면 그 순서, 없으면 등록 순서
+        const multiDayDaySchedules = daySchedules.filter(s => s.startHour === undefined).sort(byOrd);
         const incompleteCount = getIncompleteCarryItems(dateStr).length;
         const canCarry = incompleteCount > 0 && dateStr <= formatDateString(new Date());
-        const timeSchedules = daySchedules.filter(s => s.startHour !== undefined);
+        const timeSchedules = daySchedules.filter(s => s.startHour !== undefined).sort(byOrd);
 
         // 종일/다일 일정은 오전/오후 구역에 넣지 않고 요일 밑에 따로 표시
         const amSchedules = timeSchedules.filter(s => s.startHour < 12);
@@ -2252,10 +2257,10 @@
         subTasksHtml = `<div class="ml-6 pl-2.5 border-l-2 border-slate-200 space-y-1 pt-1">`;
         sched.subTasks.forEach(sub => {
           subTasksHtml += `
-            <div class="flex items-center justify-between text-[11px] gap-2 py-0.5">
-              <label class="flex items-center gap-1.5 min-w-0 cursor-pointer">
-                <input type="checkbox" ${sub.completed ? 'checked' : ''} onchange="toggleSubTaskComplete('${sched.id}', '${sub.id}')" class="w-3 h-3 rounded text-slate-700 cursor-pointer">
-                <span class="truncate ${sub.completed ? 'line-through text-slate-400' : 'text-slate-600'}">${escapeHtml(sub.title)}</span>
+            <div class="flex items-start justify-between text-[11px] gap-2 py-0.5">
+              <label class="flex items-start gap-1.5 min-w-0 cursor-pointer">
+                <input type="checkbox" ${sub.completed ? 'checked' : ''} onchange="toggleSubTaskComplete('${sched.id}', '${sub.id}')" class="w-3 h-3 mt-0.5 flex-shrink-0 rounded text-slate-700 cursor-pointer">
+                <span class="break-words whitespace-pre-wrap min-w-0 ${sub.completed ? 'line-through text-slate-400' : 'text-slate-600'}">${escapeHtml(sub.title)}</span>
               </label>
               <button onclick="deleteSubTask('${sched.id}', '${sub.id}')" class="text-slate-300 hover:text-red-400 p-0.5"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -2269,16 +2274,17 @@
         : '';
 
       return `
-        <div draggable="true" ondragstart="dragStartSchedule(event, '${sched.id}')"
+        <div data-card-id="${sched.id}" draggable="true" ondragstart="dragStartSchedule(event, '${sched.id}')"
              onclick="openScheduleModal(state.selectedDate, 9, 0, 10, 0, '${sched.id}')"
              class="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2 hover:shadow-md hover:border-slate-400 transition cursor-pointer">
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2.5 flex-1 min-w-0">
+              <span onpointerdown="startReorder(event, this)" onclick="event.stopPropagation()" title="끌어서 순서 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0 flex items-center justify-center" style="touch-action:none;min-width:14px;min-height:22px"><i class="fa-solid fa-grip-vertical text-[11px]"></i></span>
               ${leftControlHtml}
               <div class="min-w-0">
-                <div class="flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full inline-block flex-shrink-0" style="background-color: ${bgHex}"></span>
-                  <span class="text-xs font-bold truncate ${isDone(sched) ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(sched.title)}</span>
+                <div class="flex items-start gap-1.5">
+                  <span class="w-2 h-2 mt-1 rounded-full inline-block flex-shrink-0" style="background-color: ${bgHex}"></span>
+                  <span class="text-xs font-bold break-words whitespace-pre-wrap min-w-0 ${isDone(sched) ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(sched.title)}</span>
                   ${sched.isDeadline ? '<span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 rounded flex-shrink-0">마감</span>' : ''}
                   ${sched.seriesId ? '<i class="fa-solid fa-repeat text-[9px] text-slate-400 flex-shrink-0" title="반복 일정"></i>' : ''}
                 </div>
@@ -2294,6 +2300,44 @@
           ${subTasksHtml}
         </div>
       `;
+    }
+
+    // 카드 순서 바꾸기: 손잡이(⠿)를 잡고 같은 목록 안에서 끌면 순서가 바뀜 (다른 날/오전·오후로 옮기기는 카드 자체를 끌기)
+    let reorder = null;
+    function startReorder(e, handle) {
+      if (e.button !== undefined && e.button !== 0) return;
+      const card = handle.closest('[data-card-id]');
+      if (!card) return;
+      e.preventDefault(); e.stopPropagation();
+      card.draggable = false;
+      reorder = { card, list: card.parentElement, before: [...card.parentElement.children].map(c => c.dataset.cardId).join() };
+      card.style.opacity = '0.6'; card.style.outline = '2px solid #94a3b8';
+      // 카드를 옮기면 손잡이가 DOM에서 다시 끼워져 포인터 캡처가 풀리므로, 이동/종료 이벤트는 문서 전체에서 받음
+      document.addEventListener('pointermove', moveReorder, { passive: false });
+      document.addEventListener('pointerup', endReorder);
+      document.addEventListener('pointercancel', endReorder);
+    }
+    function moveReorder(e) {
+      if (!reorder) return;
+      e.preventDefault();
+      const { card, list } = reorder;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const target = el && el.closest('[data-card-id]');
+      if (!target || target === card || target.parentElement !== list) return;
+      const after = card.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING;   // 내 아래에 있는 카드면 그 뒤로
+      list.insertBefore(card, after ? target.nextSibling : target);
+    }
+    function endReorder() {
+      if (!reorder) return;
+      const { card, list, before } = reorder; reorder = null;
+      document.removeEventListener('pointermove', moveReorder);
+      document.removeEventListener('pointerup', endReorder);
+      document.removeEventListener('pointercancel', endReorder);
+      card.draggable = true; card.style.opacity = ''; card.style.outline = '';
+      const ids = [...list.children].map(c => c.dataset.cardId).filter(Boolean);
+      if (ids.join() === before) return;
+      ids.forEach((id, i) => { const sc = state.schedules.find(x => x.id === id); if (sc) sc.ord = i; });
+      saveLocalStorage(); renderAll();
     }
 
     function dropToSpecificDate(e, targetDateStr, section) {
@@ -2682,13 +2726,18 @@
 
     // 종일 일정: 시간 입력을 숨기고 시간 없이 저장 (저장 로직은 시간 입력칸이 숨겨져 있으면 종일로 처리)
     function syncAllDayCheckbox() {
-      document.getElementById('schedDuplicateBtn').classList.toggle('hidden', !document.getElementById('schedEditId').value);
-      document.getElementById('schedAllDayInput').checked = document.getElementById('timeSelectionWrapper').classList.contains('hidden');
+      const eid = document.getElementById('schedEditId').value;
+      document.getElementById('schedDuplicateBtn').classList.toggle('hidden', !eid);
+      const allDay = document.getElementById('timeSelectionWrapper').classList.contains('hidden');
+      document.getElementById('schedAllDayInput').checked = allDay;
+      const cur = eid && state.schedules.find(x => x.id === eid);
+      document.getElementById('schedCheckableInput').checked = !!(cur && cur.checkable);
     }
     function setAllDayMode(on) {
       document.getElementById('timeSelectionWrapper').classList.toggle('hidden', on);
       document.getElementById('schedAllDayInput').checked = on;
-      if (!on) {   // 시간 일정으로 바꿀 때 시작/종료가 비어 있거나 같으면 기본값(9:00~10:00)
+      if (!on) {
+        document.getElementById('schedCheckableInput').checked = false;   // 시간 일정은 원래 체크 가능하므로 할 일 표시는 해제   // 시간 일정으로 바꿀 때 시작/종료가 비어 있거나 같으면 기본값(9:00~10:00)
         const g = id => parseInt(document.getElementById(id).value);
         if (!(g('schedEndHour') * 60 + g('schedEndMin') > g('schedStartHour') * 60 + g('schedStartMin'))) {
           document.getElementById('schedStartHour').value = 9; document.getElementById('schedStartMin').value = 0;
@@ -2714,11 +2763,25 @@
       subs.forEach(st => addModalSubTaskInput(st.title));
       if (!subs.length) addModalSubTaskInput();
       setAllDayMode(!timed);
+      document.getElementById('schedCheckableInput').checked = !timed && !!sched.checkable;
     }
     function openAllDayModal(dateStr) {
       openScheduleModal(dateStr);
       setAllDayMode(true);
     }
+
+    document.addEventListener('keydown', e => {
+      const m = document.getElementById('scheduleModal');
+      if (!m || m.classList.contains('hidden')) return;
+      if (e.key === 'Escape') { e.preventDefault(); closeScheduleModal(); return; }
+      if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229 && e.target.classList && e.target.classList.contains('sub-task-val')) {
+        e.preventDefault();                                   // 저장되지 않고
+        if (!e.target.value.trim()) return;                   // 빈 칸이면 아무 일 없음
+        addModalSubTaskInput();                               // 새 세부 항목 칸을 추가하고 바로 입력
+        const inputs = document.querySelectorAll('#modalSubTasksContainer .sub-task-val');
+        inputs[inputs.length - 1].focus();
+      }
+    });
 
     function closeScheduleModal() { document.getElementById('scheduleModal').classList.add('hidden'); }
 
@@ -2731,6 +2794,7 @@
       const color = document.getElementById('schedColorInput').value;
       const repeatType = document.getElementById('schedRepeatType').value;
       const isDeadline = document.getElementById('schedDeadlineInput').checked;
+      const checkable = document.getElementById('timeSelectionWrapper').classList.contains('hidden') && document.getElementById('schedCheckableInput').checked;
 
       const isTimeHidden = document.getElementById('timeSelectionWrapper').classList.contains('hidden');
       const startHour = isTimeHidden ? undefined : parseInt(document.getElementById('schedStartHour').value);
@@ -2760,7 +2824,7 @@
         getSeriesTargets(sched, scope).forEach(t => {
           const newStart = t.id === sched.id ? startDate : addDaysStr(t.startDate, dayShift);
           Object.assign(t, {
-            title, color, startHour, startMin, endHour, endMin, isDeadline,
+            title, color, startHour, startMin, endHour, endMin, isDeadline, checkable,
             startDate: newStart, endDate: addDaysStr(newStart, span),
             subTasks: mergeSubTasks(t.subTasks, subTitles)
           });
@@ -2780,7 +2844,7 @@
         dates.forEach((d, i) => {
           state.schedules.push({
             id: 'sched_' + Date.now() + '_' + i,
-            title, isDeadline, startDate: d, endDate: addDaysStr(d, span),
+            title, isDeadline, checkable, startDate: d, endDate: addDaysStr(d, span),
             startHour, startMin, endHour, endMin, color, completed: false,
             ...(seriesId ? { seriesId } : {}),
             subTasks: mergeSubTasks([], subTitles)
