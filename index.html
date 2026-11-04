@@ -1513,20 +1513,73 @@
         </div>` : '';
     }
 
+    // 형광펜 색상 팔레트: 기본 7색에서 시작하고, + 로 색을 추가 / 편집 모드에서 삭제 (이 기기에 저장)
+    let colorEditMode = false;
+    function getPalette() {
+      const p = state.settings.palette;
+      return Array.isArray(p) && p.length ? p : pastelColors.map(c => c.hex);
+    }
+    function savePalette(p) { state.settings.palette = p; saveLocalStorage(); }
+    function addPaletteColor(hex) {
+      hex = String(hex || '').toLowerCase();
+      if (!/^#[0-9a-f]{6}$/.test(hex)) return;
+      const p = getPalette().slice();
+      if (!p.includes(hex)) {
+        if (p.length >= 24) { showToast('색상은 최대 24개까지', '안 쓰는 색을 먼저 삭제해 주세요.'); return; }
+        p.push(hex); savePalette(p);
+      }
+      renderColorPalette();
+      selectColor(hex);
+    }
+    function removePaletteColor(hex) {
+      const p = getPalette().filter(h => h !== hex);
+      if (!p.length) return;
+      savePalette(p);
+      if (document.getElementById('schedColorInput').value === hex) document.getElementById('schedColorInput').value = p[0];
+      renderColorPalette();
+    }
     function renderColorPalette() {
       const container = document.getElementById('colorPaletteContainer');
       container.innerHTML = '';
+      const palette = getPalette();
 
-      pastelColors.forEach((color, idx) => {
+      palette.forEach(hex => {
+        const wrap = document.createElement('div');
+        wrap.className = 'relative';
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `w-7 h-7 rounded-full border-2 border-white shadow-sm transition transform hover:scale-110 color-swatch-btn`;
-        btn.style.backgroundColor = color.hex;
-        btn.onclick = () => selectColor(color.hex);
-        btn.dataset.hex = color.hex;
-        if (idx === 0) btn.classList.add('ring-2', 'ring-slate-700');
-        container.appendChild(btn);
+        btn.className = 'w-7 h-7 rounded-full border-2 border-white shadow-sm transition transform hover:scale-110 color-swatch-btn';
+        btn.style.backgroundColor = hex;
+        btn.onclick = () => selectColor(hex);
+        btn.dataset.hex = hex;
+        wrap.appendChild(btn);
+        if (colorEditMode && palette.length > 1) {
+          const x = document.createElement('button');
+          x.type = 'button';
+          x.textContent = '×';
+          x.title = '이 색상 삭제';
+          x.className = 'absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-700 text-white text-[10px] leading-none flex items-center justify-center shadow';
+          x.onclick = e => { e.stopPropagation(); removePaletteColor(hex); };
+          wrap.appendChild(x);
+        }
+        container.appendChild(wrap);
       });
+
+      const add = document.createElement('label');
+      add.title = '색상 추가';
+      add.className = 'relative w-7 h-7 rounded-full border-2 border-dashed border-slate-300 text-slate-400 hover:text-slate-600 hover:border-slate-400 flex items-center justify-center cursor-pointer text-sm leading-none overflow-hidden';
+      add.innerHTML = '+<input type="color" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">';
+      add.querySelector('input').onchange = e => addPaletteColor(e.target.value);
+      container.appendChild(add);
+
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = colorEditMode ? '완료' : '편집';
+      edit.className = 'text-[11px] text-slate-400 hover:text-slate-600 underline ml-1';
+      edit.onclick = () => { colorEditMode = !colorEditMode; renderColorPalette(); };
+      container.appendChild(edit);
+
+      selectColor(document.getElementById('schedColorInput').value);
     }
 
     function selectColor(hex) {
@@ -2592,7 +2645,7 @@
           } else {
             document.getElementById('timeSelectionWrapper').classList.add('hidden');
           }
-          selectColor(sched.color || pastelColors[0].hex);
+          selectColor(sched.color || getPalette()[0]);
           document.getElementById('schedDeadlineInput').checked = !!sched.isDeadline;
           if (sched.subTasks && sched.subTasks.length > 0) {
             sched.subTasks.forEach(st => addModalSubTaskInput(st.title));
@@ -2605,7 +2658,7 @@
         document.getElementById('schedStartMin').value = startMin;
         document.getElementById('schedEndHour').value = endHour;
         document.getElementById('schedEndMin').value = endMin;
-        selectColor(pastelColors[0].hex);
+        selectColor(getPalette()[0]);
         addModalSubTaskInput();
       }
 
