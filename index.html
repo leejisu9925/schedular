@@ -2254,7 +2254,7 @@
 
       let subTasksHtml = '';
       if (sched.subTasks && sched.subTasks.length > 0) {
-        subTasksHtml = `<div class="ml-6 pl-2.5 border-l-2 border-slate-200 space-y-1 pt-1">`;
+        subTasksHtml = `<div class="ml-6 pl-2.5 border-l-2 border-slate-200 space-y-1 pt-1" onclick="event.stopPropagation()">`;   // 세부 항목을 눌러도 카드의 수정창이 열리지 않게
         sched.subTasks.forEach(sub => {
           subTasksHtml += `
             <div class="flex items-start justify-between text-[11px] gap-2 py-0.5">
