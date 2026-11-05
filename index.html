@@ -350,14 +350,17 @@
               </select>
             </div>
 
-            <div class="flex items-center gap-1">
-              <button onclick="changeWeek(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200">
-                <i class="fa-solid fa-chevron-left text-sm"></i>
-              </button>
-              <span id="weekRangeText" class="text-xs font-semibold text-slate-700 px-3">-</span>
-              <button onclick="changeWeek(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200">
-                <i class="fa-solid fa-chevron-right text-sm"></i>
-              </button>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1">
+                <button onclick="changeWeek(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200" title="이전 주">
+                  <i class="fa-solid fa-chevron-left text-sm"></i>
+                </button>
+                <span id="weekRangeText" class="text-xs font-semibold text-slate-700 px-3">-</span>
+                <button onclick="changeWeek(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition border border-slate-200" title="다음 주">
+                  <i class="fa-solid fa-chevron-right text-sm"></i>
+                </button>
+              </div>
+              <button onclick="goToToday(); switchTab('weekly')" class="px-3 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700 transition whitespace-nowrap">오늘</button>
             </div>
           </div>
         </div>
@@ -851,11 +854,13 @@
       <div class="flex justify-between items-start border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2">
           <div id="detailColorBadge" class="w-3.5 h-3.5 rounded-full border border-black/10"></div>
-          <h3 id="detailTitle" class="text-lg font-bold text-slate-800">계획 상세보기</h3>
+          <h3 id="detailTitle" class="text-lg font-bold text-slate-800 select-text">계획 상세보기</h3>
         </div>
-        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 p-1">
+        <div class="flex items-center gap-2">
+          <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 p-1">
           <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+          </button>
+        </div>
       </div>
 
       <div class="space-y-3 text-xs text-slate-600">
@@ -1200,6 +1205,9 @@
     </div>
   </div>
 
+  <button id="backToTopBtn" onclick="scrollPageToTop()" aria-label="맨 위로 이동" title="맨 위로" class="fixed bottom-5 right-5 z-[65] w-11 h-11 rounded-full bg-slate-800 text-white shadow-lg hover:bg-slate-700 transition flex items-center justify-center opacity-0 pointer-events-none">
+    <i class="fa-solid fa-arrow-up"></i>
+  </button>
   <div id="toastContainer" class="fixed top-4 right-4 left-4 md:left-auto z-[70] space-y-2 flex flex-col items-end"></div>
 
   <!-- JavaScript -->
@@ -1276,6 +1284,8 @@
     window.onload = function() {
       loadLocalStorage();
       populateTimeSelects();
+      setupScheduleDateConstraints();
+      setupBackToTopButton();
       renderColorPalette();
       setupHeaderDragEvents();
       setupWeeklyDragEvents();
@@ -1378,6 +1388,43 @@
       state.selectedDate = formatDateString(today);
       state.currentCalendarDate = new Date();
       renderAll();
+    }
+
+    function setupBackToTopButton() {
+      const update = () => {
+        const btn = document.getElementById('backToTopBtn');
+        if (!btn) return;
+        const main = document.querySelector('main');
+        const scrollTop = Math.max(window.scrollY || 0, main ? main.scrollTop : 0);
+        btn.classList.toggle('opacity-0', scrollTop < 240);
+        btn.classList.toggle('pointer-events-none', scrollTop < 240);
+      };
+      window.addEventListener('scroll', update, { passive: true });
+      const main = document.querySelector('main');
+      if (main) main.addEventListener('scroll', update, { passive: true });
+      update();
+    }
+
+    function scrollPageToTop() {
+      const main = document.querySelector('main');
+      if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setupScheduleDateConstraints() {
+      const start = document.getElementById('schedStartDateInput');
+      const end = document.getElementById('schedEndDateInput');
+      if (!start || !end || start.dataset.constraintReady) return;
+      start.dataset.constraintReady = '1';
+      end.dataset.constraintReady = '1';
+      start.addEventListener('change', () => {
+        if (start.value && end.value && end.value < start.value) end.value = start.value;
+        if (start.value) end.min = start.value;
+      });
+      end.addEventListener('change', () => {
+        if (start.value && end.value && end.value < start.value) end.value = start.value;
+        if (start.value) end.min = start.value;
+      });
     }
 
     function switchTab(tabId) {
@@ -2262,7 +2309,11 @@
                 <input type="checkbox" ${sub.completed ? 'checked' : ''} onchange="toggleSubTaskComplete('${sched.id}', '${sub.id}')" class="w-3 h-3 mt-0.5 flex-shrink-0 rounded text-slate-700 cursor-pointer">
                 <span class="break-words whitespace-pre-wrap min-w-0 ${sub.completed ? 'line-through text-slate-400' : 'text-slate-600'}">${escapeHtml(sub.title)}</span>
               </label>
-              <button onclick="deleteSubTask('${sched.id}', '${sub.id}')" class="text-slate-300 hover:text-red-400 p-0.5"><i class="fa-solid fa-xmark"></i></button>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button onclick="moveSubTask('${sched.id}', '${sub.id}', -1)" title="위로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-up text-[9px]"></i></button>
+                <button onclick="moveSubTask('${sched.id}', '${sub.id}', 1)" title="아래로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-down text-[9px]"></i></button>
+                <button onclick="deleteSubTask('${sched.id}', '${sub.id}')" class="text-slate-300 hover:text-red-400 p-0.5"><i class="fa-solid fa-xmark"></i></button>
+              </div>
             </div>
           `;
         });
@@ -2284,7 +2335,7 @@
               <div class="min-w-0">
                 <div class="flex items-start gap-1.5">
                   <span class="w-2 h-2 mt-1 rounded-full inline-block flex-shrink-0" style="background-color: ${bgHex}"></span>
-                  <span class="text-xs font-bold break-words whitespace-pre-wrap min-w-0 ${isDone(sched) ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(sched.title)}</span>
+                  <span onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" class="text-xs font-bold break-words whitespace-pre-wrap min-w-0 select-text cursor-text ${isDone(sched) ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(sched.title)}</span>
                   ${sched.isDeadline ? '<span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 rounded flex-shrink-0">마감</span>' : ''}
                   ${sched.seriesId ? '<i class="fa-solid fa-repeat text-[9px] text-slate-400 flex-shrink-0" title="반복 일정"></i>' : ''}
                 </div>
@@ -2680,7 +2731,7 @@
       container.appendChild(div);
     }
 
-    function openScheduleModal(dateStr = state.selectedDate, startHour = 9, startMin = 0, endHour = 10, endMin = 0, editId = null) {
+    function openScheduleModal(dateStr = state.selectedDate, startHour = null, startMin = null, endHour = null, endMin = null, editId = null) {
       document.getElementById('scheduleForm').reset();
       document.getElementById('modalSubTasksContainer').innerHTML = '';
       document.getElementById('timeSelectionWrapper').classList.remove('hidden');
@@ -2709,16 +2760,31 @@
           }
         }
       } else {
+        const now = new Date();
+        let startTotal = (startHour === null || startMin === null)
+          ? (now.getHours() * 60 + now.getMinutes())
+          : (startHour * 60 + startMin);
+        // 시간 선택 범위(06:00~23:59)에 맞춰 기본 시작 시각을 보정
+        startTotal = Math.max(6 * 60, Math.min(22 * 60 + 59, startTotal));
+        const durationEnd = startTotal + 60;
+        const endDate = durationEnd >= 24 * 60 ? addDaysStr(dateStr, 1) : dateStr;
+        const startH = startHour === null ? Math.floor(startTotal / 60) : startHour;
+        const startM = startMin === null ? startTotal % 60 : startMin;
+        const endTotal = endHour === null || endMin === null ? durationEnd : endHour * 60 + endMin;
         document.getElementById('schedStartDateInput').value = dateStr;
-        document.getElementById('schedEndDateInput').value = dateStr;
-        document.getElementById('schedStartHour').value = startHour;
-        document.getElementById('schedStartMin').value = startMin;
-        document.getElementById('schedEndHour').value = endHour;
-        document.getElementById('schedEndMin').value = endMin;
+        document.getElementById('schedEndDateInput').value = (endHour === null || endMin === null) ? endDate : dateStr;
+        document.getElementById('schedStartHour').value = startH;
+        document.getElementById('schedStartMin').value = startM;
+        document.getElementById('schedEndHour').value = endHour === null || endMin === null ? endTotal % (24 * 60) / 60 : endHour;
+        document.getElementById('schedEndMin').value = endHour === null || endMin === null ? endTotal % 60 : endMin;
         selectColor(getPalette()[0]);
         addModalSubTaskInput();
       }
 
+      const startDateInput = document.getElementById('schedStartDateInput');
+      const endDateInput = document.getElementById('schedEndDateInput');
+      endDateInput.min = startDateInput.value || '';
+      if (startDateInput.value && endDateInput.value && endDateInput.value < startDateInput.value) endDateInput.value = startDateInput.value;
       configureRepeatUI(editId);
       syncAllDayCheckbox();
       document.getElementById('scheduleModal').classList.remove('hidden');
@@ -2790,7 +2856,11 @@
       const editId = document.getElementById('schedEditId').value;
       const title = document.getElementById('schedTitleInput').value.trim();
       const startDate = document.getElementById('schedStartDateInput').value;
-      const endDate = document.getElementById('schedEndDateInput').value;
+      let endDate = document.getElementById('schedEndDateInput').value;
+      if (startDate && endDate && endDate < startDate) {
+        endDate = startDate;
+        document.getElementById('schedEndDateInput').value = startDate;
+      }
       const color = document.getElementById('schedColorInput').value;
       const repeatType = document.getElementById('schedRepeatType').value;
       const isDeadline = document.getElementById('schedDeadlineInput').checked;
@@ -2802,7 +2872,6 @@
       const endHour = isTimeHidden ? undefined : parseInt(document.getElementById('schedEndHour').value);
       const endMin = isTimeHidden ? undefined : parseInt(document.getElementById('schedEndMin').value);
 
-      if (startDate > endDate) { alert('종료 날짜는 시작 날짜보다 빠를 수 없습니다.'); return; }
       if (!isTimeHidden) {
         const startTotal = (startHour * 60) + startMin;
         const endTotal = (endHour * 60) + endMin;
@@ -2857,6 +2926,19 @@
       renderAll();
     }
 
+    function moveSubTask(schedId, subId, direction) {
+      const sched = state.schedules.find(s => s.id === schedId);
+      if (!sched || !Array.isArray(sched.subTasks)) return;
+      const index = sched.subTasks.findIndex(st => st.id === subId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= sched.subTasks.length) return;
+      [sched.subTasks[index], sched.subTasks[nextIndex]] = [sched.subTasks[nextIndex], sched.subTasks[index]];
+      saveLocalStorage();
+      renderAll();
+    }
+
+
+
     function openDetailModal(schedId) {
       state.activeDetailId = schedId;
       const sched = state.schedules.find(s => s.id === schedId);
@@ -2879,7 +2961,9 @@
           row.className = 'flex items-center gap-2 text-xs text-slate-700';
           row.innerHTML = `
             <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleSubTaskComplete('${sched.id}', '${st.id}'); openDetailModal('${sched.id}');" class="rounded text-slate-700 cursor-pointer">
-            <span class="${st.completed ? 'line-through text-slate-400' : ''}">${escapeHtml(st.title)}</span>
+            <span class="flex-1 ${st.completed ? 'line-through text-slate-400' : ''}">${escapeHtml(st.title)}</span>
+            <button onclick="moveSubTask('${sched.id}', '${st.id}', -1); openDetailModal('${sched.id}')" title="위로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-up text-[10px]"></i></button>
+            <button onclick="moveSubTask('${sched.id}', '${st.id}', 1); openDetailModal('${sched.id}')" title="아래로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-down text-[10px]"></i></button>
           `;
           subContainer.appendChild(row);
         });
