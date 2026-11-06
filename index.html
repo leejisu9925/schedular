@@ -228,7 +228,7 @@
         </div>
       </div>
 
-      <div class="soft-card p-5 md:p-8 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 border border-slate-300 rounded-2xl relative overflow-hidden shadow-xs">
+      <div class="soft-card p-5 md:p-8 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 border border-slate-300 rounded-2xl relative overflow-hidden shadow-xs md:flex md:items-center md:justify-between gap-6">
         <div class="max-w-xl">
           <span class="text-[11px] font-bold tracking-widest text-slate-500 uppercase">🤍 DASHBOARD</span>
           <h3 class="text-xl md:text-2xl font-black mt-1 mb-2">
@@ -247,6 +247,19 @@
               <i class="fa-solid fa-print"></i> 오늘 일정 인쇄
             </button>
           </div>
+        </div>
+
+        <!-- 시계 · 날씨 (Open-Meteo, 현재 위치 기준) -->
+        <div id="homeWidget" class="mt-5 md:mt-0 bg-white/70 border border-slate-300 rounded-2xl px-4 py-3 w-full md:w-[290px] flex-shrink-0 shadow-2xs">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-3xl font-black tracking-tight tabular-nums text-slate-800 leading-none"><span id="clockTime">--:--</span><span id="clockSec" class="text-base font-bold text-slate-400 ml-1">:--</span></div>
+              <div id="clockDate" class="text-[11px] font-semibold text-slate-500 mt-1">-</div>
+            </div>
+            <button id="weatherRefreshBtn" onclick="refreshWeather(true)" title="내 위치로 날씨 새로고침" class="text-slate-400 hover:text-slate-700 p-1 transition"><i class="fa-solid fa-location-crosshairs"></i></button>
+          </div>
+          <div class="border-t border-slate-200 my-2.5"></div>
+          <div id="weatherBody" class="text-xs text-slate-500">날씨를 불러오는 중…</div>
         </div>
       </div>
 
@@ -4781,6 +4794,118 @@
         osc.stop(audioCtx.currentTime + 0.35);
       } catch (e) { /* 소리 재생 불가 시 무시 */ }
     }
+  </script>
+  <script>
+  // ===================== 홈 대시보드: 시계 + 날씨(기온·날씨·강수·미세먼지) =====================
+  // 데이터: Open-Meteo (무료·키 불필요). 위치는 브라우저의 '현재 위치'를 쓰고, 좌표는 이 기기에만 저장돼요.
+  (() => {
+    const CACHE_KEY = 'app_weather_cache_v1', REFRESH_MS = 30 * 60 * 1000;
+    const DEFAULT_POS = { lat: 37.26, lon: 127.03 };   // 위치 권한이 없을 때 쓰는 기본 위치(수원)
+    const DAYS = ['일', '월', '화', '수', '목', '금', '토'], p2 = n => String(n).padStart(2, '0');
+    const $ = id => document.getElementById(id);
+    let loading = false;
+
+    function tick() {
+      const n = new Date();
+      $('clockTime').textContent = `${p2(n.getHours())}:${p2(n.getMinutes())}`;
+      $('clockSec').textContent = ':' + p2(n.getSeconds());
+      $('clockDate').textContent = `${n.getFullYear()}년 ${n.getMonth() + 1}월 ${n.getDate()}일 ${DAYS[n.getDay()]}요일`;
+    }
+
+    function wmo(code, isDay) {   // WMO 날씨 코드 → [아이콘, 설명]
+      if (code === 0) return isDay ? ['☀️', '맑음'] : ['🌙', '맑음'];
+      if (code === 1) return isDay ? ['🌤️', '대체로 맑음'] : ['🌙', '대체로 맑음'];
+      if (code === 2) return ['⛅', '구름 조금'];
+      if (code === 3) return ['☁️', '흐림'];
+      if (code === 45 || code === 48) return ['🌫️', '안개'];
+      if (code >= 51 && code <= 57) return ['🌦️', '이슬비'];
+      if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return ['🌧️', code >= 80 ? '소나기' : '비'];
+      if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['❄️', '눈'];
+      if (code >= 95) return ['⛈️', '뇌우'];
+      return ['🌡️', '날씨'];
+    }
+    function dustGrade(v, cuts) {   // 한국 기준 (좋음 / 보통 / 나쁨 / 매우나쁨)
+      if (v == null) return ['-', 'text-slate-400 bg-slate-100'];
+      if (v <= cuts[0]) return ['좋음', 'text-sky-600 bg-sky-50'];
+      if (v <= cuts[1]) return ['보통', 'text-emerald-600 bg-emerald-50'];
+      if (v <= cuts[2]) return ['나쁨', 'text-orange-600 bg-orange-50'];
+      return ['매우 나쁨', 'text-red-600 bg-red-50'];
+    }
+    const loadCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch (e) { return null; } };
+    const saveCache = c => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch (e) {} };
+
+    function render(c, note) {
+      const d = c.data, [icon, label] = wmo(d.code, d.isDay);
+      const [g10, c10] = dustGrade(d.pm10, [30, 80, 150]), [g25, c25] = dustGrade(d.pm25, [15, 35, 75]);
+      const t = new Date(c.fetchedAt), place = { gps: '📍 현재 위치', saved: '📍 마지막으로 확인한 위치', default: '📍 수원 (위치 권한이 꺼져 있어요)' }[c.source] || '📍';
+      const box = (title, value, sub, chip) => `<div class="rounded-lg bg-slate-50 border border-slate-200 py-1.5 px-1"><div class="text-slate-400">${title}</div><div class="font-bold text-slate-700 leading-tight">${value}</div>${chip ? `<div class="inline-block mt-0.5 px-1.5 rounded-full text-[10px] font-bold ${chip}">${sub}</div>` : `<div class="text-slate-400 text-[10px]">${sub}</div>`}</div>`;
+      $('weatherBody').innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="text-3xl leading-none">${icon}</span>
+          <div class="min-w-0">
+            <div class="text-xl font-black text-slate-800 leading-tight">${Math.round(d.temp)}°<span class="text-[11px] font-semibold text-slate-500 ml-1.5">${label} · 체감 ${Math.round(d.feels)}°</span></div>
+            <div class="text-[11px] text-slate-500">오늘 최고 ${Math.round(d.max)}° / 최저 ${Math.round(d.min)}°</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 mt-2.5 text-center text-[11px]">
+          ${box('강수', `${(d.rain ?? 0).toFixed(1)}mm`, `확률 ${d.rainProb ?? 0}%`)}
+          ${box('미세먼지', d.pm10 == null ? '-' : Math.round(d.pm10), g10, c10)}
+          ${box('초미세먼지', d.pm25 == null ? '-' : Math.round(d.pm25), g25, c25)}
+        </div>
+        <div class="text-[10px] text-slate-400 mt-2">${place} · ${p2(t.getHours())}:${p2(t.getMinutes())} 기준${note ? ' · ' + note : ''}</div>`;
+    }
+
+    function getPosition() {
+      return new Promise(resolve => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          p => resolve({ lat: Math.round(p.coords.latitude * 100) / 100, lon: Math.round(p.coords.longitude * 100) / 100 }),   // 약 1km 단위로만 사용
+          () => resolve(null),
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 });
+      });
+    }
+
+    async function fetchWeather(pos) {
+      const q = `latitude=${pos.lat}&longitude=${pos.lon}&timezone=auto`;
+      const [f, a] = await Promise.allSettled([
+        fetch(`https://api.open-meteo.com/v1/forecast?${q}&current=temperature_2m,apparent_temperature,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&forecast_days=1`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+        fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${q}&current=pm10,pm2_5`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      ]);
+      if (f.status !== 'fulfilled') throw f.reason;                  // 날씨가 없으면 실패 (미세먼지만 없으면 '-' 로 표시)
+      const w = f.value, air = a.status === 'fulfilled' ? a.value : null;
+      return {
+        temp: w.current.temperature_2m, feels: w.current.apparent_temperature, code: w.current.weather_code, isDay: !!w.current.is_day,
+        max: w.daily.temperature_2m_max[0], min: w.daily.temperature_2m_min[0], rain: w.daily.precipitation_sum[0], rainProb: w.daily.precipitation_probability_max[0],
+        pm10: air && air.current ? air.current.pm10 : null, pm25: air && air.current ? air.current.pm2_5 : null,
+      };
+    }
+
+    // force=true: 내 위치를 다시 찾아 새로고침 / 아니면 30분 이내 저장값은 그대로 사용
+    window.refreshWeather = async function (force) {
+      if (loading) return;
+      const cache = loadCache();
+      if (!force && cache && Date.now() - cache.fetchedAt < REFRESH_MS) { render(cache); return; }
+      loading = true;
+      const icon = $('weatherRefreshBtn').firstElementChild; icon.classList.add('fa-beat');
+      try {
+        let pos = await getPosition(), source = 'gps';
+        if (!pos) { pos = cache && cache.pos ? cache.pos : DEFAULT_POS; source = cache && cache.pos ? 'saved' : 'default'; }
+        const data = await fetchWeather(pos);
+        const fresh = { pos, source, data, fetchedAt: Date.now() };
+        saveCache(fresh); render(fresh);
+      } catch (e) {
+        if (cache) render(cache, navigator.onLine ? '갱신 실패' : '오프라인');
+        else $('weatherBody').innerHTML = '<div class="text-slate-500">날씨를 불러오지 못했어요. <button onclick="refreshWeather(true)" class="underline font-semibold">다시 시도</button></div>';
+      } finally { loading = false; icon.classList.remove('fa-beat'); }
+    };
+
+    tick(); setInterval(tick, 1000);
+    const c0 = loadCache(); if (c0) render(c0);                       // 저장된 값을 먼저 보여주고
+    window.addEventListener('load', () => refreshWeather(false));      // 오래됐으면 새로 받아옴
+    setInterval(() => { if (!document.hidden) refreshWeather(false); }, REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshWeather(false); });
+    window.addEventListener('online', () => refreshWeather(false));
+  })();
   </script>
   <script>
   // ===================== Supabase 실시간 동기화 =====================
