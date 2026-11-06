@@ -778,7 +778,7 @@
         <!-- 1분 단위 시간 설정 (시, 분 입력방식) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-[#f8fafc] rounded-xl border border-slate-200" id="timeSelectionWrapper">
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>시작 시간 (1분 단위)</label>
+            <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>시작 시간</label>
             <div class="flex gap-1.5">
               <select id="schedStartHour" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
               <span class="self-center font-bold">:</span>
@@ -786,13 +786,17 @@
             </div>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>종료 시간 (1분 단위)</label>
+            <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>종료 시간</label>
             <div class="flex gap-1.5">
               <select id="schedEndHour" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
               <span class="self-center font-bold">:</span>
               <select id="schedEndMin" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
             </div>
           </div>
+          <label class="sm:col-span-2 flex items-center gap-2 text-[11px] text-slate-500 cursor-pointer w-fit">
+            <input type="checkbox" id="schedFineMinInput" class="rounded" onchange="setMinuteMode(this.checked, true)">
+            <span>1분 단위로 설정 (기본은 30분 단위)</span>
+          </label>
         </div>
 
         <div class="bg-[#f8fafc] p-3.5 rounded-xl border border-slate-200 space-y-2" id="repeatSectionWrapper">
@@ -1109,6 +1113,29 @@
       <div>
         <label class="block text-xs font-bold text-slate-600 mb-1.5">함께 인쇄할 프로토콜</label>
         <div id="printProtocolList" class="bg-[#f8fafc] border border-slate-200 rounded-xl p-3 space-y-1.5 max-h-48 overflow-y-auto text-xs"></div>
+      </div>
+      <div class="space-y-2.5 border-t border-slate-200 pt-3">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="printFontSelect" class="block text-xs font-bold text-slate-600">글꼴</label>
+            <button type="button" onclick="resetPrintStyle()" class="text-[10px] text-slate-400 hover:text-slate-600 underline">기본값</button>
+          </div>
+          <select id="printFontSelect" onchange="updatePrintPreview()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+            <option value="'Malgun Gothic','Apple SD Gothic Neo',-apple-system,sans-serif">맑은 고딕 (기본)</option>
+            <option value="'NanumGothic','Nanum Gothic','Malgun Gothic',sans-serif">나눔고딕</option>
+            <option value="'Dotum','돋움','Apple SD Gothic Neo',sans-serif">돋움</option>
+            <option value="'Gulim','굴림','Apple SD Gothic Neo',sans-serif">굴림</option>
+            <option value="'NanumMyeongjo','Nanum Myeongjo','Batang','바탕','AppleMyungjo',serif">나눔명조 / 바탕 (명조체)</option>
+            <option value="'D2Coding','Consolas','Menlo','Malgun Gothic',monospace">고정폭 (D2Coding)</option>
+          </select>
+        </div>
+        <div>
+          <label for="printScaleInput" class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1"><span>글씨 크기</span><span id="printScaleLabel">100%</span></label>
+          <input type="range" id="printScaleInput" min="70" max="200" step="5" value="100" oninput="updatePrintPreview()" class="w-full">
+          <div class="flex justify-between text-[10px] text-slate-400"><span>작게</span><span>보통</span><span>크게</span></div>
+        </div>
+        <div id="printPreview" class="border border-slate-200 rounded-xl bg-[#f8fafc] px-3 py-2 text-slate-700 leading-snug overflow-hidden">가나다라마바사 ABC abc 123<br>10:00–11:00 샘플 일정</div>
+        <p class="text-[10px] text-slate-400 leading-relaxed">글꼴은 이 기기에 설치된 글꼴로 인쇄돼요. 없는 글꼴은 비슷한 기본 글꼴로 대신 나와요.</p>
       </div>
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
         <button onclick="closePrintModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
@@ -2301,19 +2328,16 @@
 
       let subTasksHtml = '';
       if (sched.subTasks && sched.subTasks.length > 0) {
-        subTasksHtml = `<div class="ml-6 pl-2.5 border-l-2 border-slate-200 space-y-1 pt-1" onclick="event.stopPropagation()">`;   // 세부 항목을 눌러도 카드의 수정창이 열리지 않게
+        subTasksHtml = `<div data-sub-list="${sched.id}" class="ml-6 pl-2.5 border-l-2 border-slate-200 space-y-1 pt-1" onclick="event.stopPropagation()">`;   // 세부 항목을 눌러도 카드의 수정창이 열리지 않게
         sched.subTasks.forEach(sub => {
           subTasksHtml += `
-            <div class="flex items-start justify-between text-[11px] gap-2 py-0.5">
-              <label class="flex items-start gap-1.5 min-w-0 cursor-pointer">
+            <div data-sub-id="${sub.id}" class="flex items-start justify-between text-[11px] gap-2 py-0.5">
+              <div class="flex items-start gap-1 min-w-0 flex-1">
+                <span onpointerdown="startReorder(event, this, 'sub')" title="끌어서 순서 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:12px;min-height:16px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-[9px]"></i></span>
                 <input type="checkbox" ${sub.completed ? 'checked' : ''} onchange="toggleSubTaskComplete('${sched.id}', '${sub.id}')" class="w-3 h-3 mt-0.5 flex-shrink-0 rounded text-slate-700 cursor-pointer">
-                <span class="break-words whitespace-pre-wrap min-w-0 ${sub.completed ? 'line-through text-slate-400' : 'text-slate-600'}">${escapeHtml(sub.title)}</span>
-              </label>
-              <div class="flex items-center gap-1 flex-shrink-0">
-                <button onclick="moveSubTask('${sched.id}', '${sub.id}', -1)" title="위로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-up text-[9px]"></i></button>
-                <button onclick="moveSubTask('${sched.id}', '${sub.id}', 1)" title="아래로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-down text-[9px]"></i></button>
-                <button onclick="deleteSubTask('${sched.id}', '${sub.id}')" class="text-slate-300 hover:text-red-400 p-0.5"><i class="fa-solid fa-xmark"></i></button>
+                <span onclick="editSubTaskText(event, '${sched.id}', '${sub.id}', this)" title="클릭해서 수정" class="sel-text select-text cursor-text break-words whitespace-pre-wrap min-w-0 flex-1 ${sub.completed ? 'line-through text-slate-400' : 'text-slate-600'}">${escapeHtml(sub.title)}</span>
               </div>
+              <button onclick="deleteSubTask('${sched.id}', '${sub.id}')" class="text-slate-300 hover:text-red-400 p-0.5 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
             </div>
           `;
         });
@@ -2335,7 +2359,7 @@
               <div class="min-w-0">
                 <div class="flex items-start gap-1.5">
                   <span class="w-2 h-2 mt-1 rounded-full inline-block flex-shrink-0" style="background-color: ${bgHex}"></span>
-                  <span onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" class="text-xs font-bold break-words whitespace-pre-wrap min-w-0 select-text cursor-text ${isDone(sched) ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(sched.title)}</span>
+                  <span onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" class="sel-text text-xs font-bold break-words whitespace-pre-wrap min-w-0 select-text cursor-text ${isDone(sched) ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(sched.title)}</span>
                   ${sched.isDeadline ? '<span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 rounded flex-shrink-0">마감</span>' : ''}
                   ${sched.seriesId ? '<i class="fa-solid fa-repeat text-[9px] text-slate-400 flex-shrink-0" title="반복 일정"></i>' : ''}
                 </div>
@@ -2353,17 +2377,21 @@
       `;
     }
 
-    // 카드 순서 바꾸기: 손잡이(⠿)를 잡고 같은 목록 안에서 끌면 순서가 바뀜 (다른 날/오전·오후로 옮기기는 카드 자체를 끌기)
+    // 순서 바꾸기: 점(⠿) 손잡이를 잡고 같은 목록 안에서 끌면 순서가 바뀜 (마우스·터치 모두)
+    //  - 'card': Weekly To Do List 카드 (다른 날/오전·오후로 옮기기는 카드 자체를 끌기)
+    //  - 'sub' : 카드 안의 세부 계획,  'row': 일정 등록·수정 창의 세부 항목 입력칸
     let reorder = null;
-    function startReorder(e, handle) {
+    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row' };
+    function startReorder(e, handle, kind = 'card') {
       if (e.button !== undefined && e.button !== 0) return;
-      const card = handle.closest('[data-card-id]');
-      if (!card) return;
+      const sel = REORDER_SEL[kind], item = handle.closest(sel);
+      if (!item) return;
       e.preventDefault(); e.stopPropagation();
-      card.draggable = false;
-      reorder = { card, list: card.parentElement, before: [...card.parentElement.children].map(c => c.dataset.cardId).join() };
-      card.style.opacity = '0.6'; card.style.outline = '2px solid #94a3b8';
-      // 카드를 옮기면 손잡이가 DOM에서 다시 끼워져 포인터 캡처가 풀리므로, 이동/종료 이벤트는 문서 전체에서 받음
+      const host = item.closest('[data-card-id]');          // 카드 안에서 끌 때 카드 자체의 드래그가 시작되지 않게 잠시 해제
+      if (host) host.draggable = false;
+      reorder = { item, host, sel, kind, list: item.parentElement, before: [...item.parentElement.children] };
+      item.style.opacity = '0.6'; item.style.outline = '2px solid #94a3b8';
+      // 항목을 옮기면 손잡이가 DOM에서 다시 끼워져 포인터 캡처가 풀리므로, 이동/종료 이벤트는 문서 전체에서 받음
       document.addEventListener('pointermove', moveReorder, { passive: false });
       document.addEventListener('pointerup', endReorder);
       document.addEventListener('pointercancel', endReorder);
@@ -2371,25 +2399,68 @@
     function moveReorder(e) {
       if (!reorder) return;
       e.preventDefault();
-      const { card, list } = reorder;
+      const { item, list, sel } = reorder;
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      const target = el && el.closest('[data-card-id]');
-      if (!target || target === card || target.parentElement !== list) return;
-      const after = card.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING;   // 내 아래에 있는 카드면 그 뒤로
-      list.insertBefore(card, after ? target.nextSibling : target);
+      const target = el && el.closest(sel);
+      if (!target || target === item || target.parentElement !== list) return;
+      const after = item.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING;   // 내 아래에 있는 항목이면 그 뒤로
+      list.insertBefore(item, after ? target.nextSibling : target);
     }
     function endReorder() {
       if (!reorder) return;
-      const { card, list, before } = reorder; reorder = null;
+      const { item, host, list, kind, before } = reorder; reorder = null;
       document.removeEventListener('pointermove', moveReorder);
       document.removeEventListener('pointerup', endReorder);
       document.removeEventListener('pointercancel', endReorder);
-      card.draggable = true; card.style.opacity = ''; card.style.outline = '';
-      const ids = [...list.children].map(c => c.dataset.cardId).filter(Boolean);
-      if (ids.join() === before) return;
-      ids.forEach((id, i) => { const sc = state.schedules.find(x => x.id === id); if (sc) sc.ord = i; });
+      if (host) host.draggable = true;
+      item.style.opacity = ''; item.style.outline = '';
+      const now = [...list.children];
+      if (now.every((c, i) => c === before[i])) return;                 // 순서가 안 바뀌었으면 저장 안 함
+      if (kind === 'row') return;                                       // 등록 창: 저장할 때 화면 순서대로 반영됨
+      if (kind === 'card') {
+        now.map(c => c.dataset.cardId).filter(Boolean).forEach((id, i) => { const sc = state.schedules.find(x => x.id === id); if (sc) sc.ord = i; });
+      } else {
+        const sc = state.schedules.find(x => x.id === list.dataset.subList);
+        if (!sc) return;
+        const ids = now.map(c => c.dataset.subId);
+        sc.subTasks = ids.map(id => sc.subTasks.find(x => x.id === id)).filter(Boolean);
+      }
       saveLocalStorage(); renderAll();
     }
+
+    // 세부 계획 글자를 클릭하면 그 자리에서 바로 수정 (Enter 저장 · Esc 취소 · 비어 있는 채로 Delete 삭제 · Shift+Enter 줄바꿈)
+    function editSubTaskText(e, schedId, subId, span) {
+      e.stopPropagation();
+      if (window.getSelection && String(window.getSelection()).length) return;   // 글자를 드래그해서 선택한 경우엔 수정으로 넘어가지 않음
+      const sched = state.schedules.find(x => x.id === schedId);
+      const sub = sched && (sched.subTasks || []).find(x => x.id === subId);
+      if (!sub) return;
+      const ta = document.createElement('textarea');
+      ta.value = sub.title; ta.rows = 1;
+      ta.className = 'flex-1 w-full min-w-0 border border-slate-300 rounded-md px-1.5 py-0.5 text-[11px] bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none overflow-hidden';
+      const fit = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+      let done = false;
+      const finish = save => {
+        if (done) return; done = true;
+        if (save) { const v = ta.value.trim(); if (v && v !== sub.title) { sub.title = v; saveLocalStorage(); } }
+        span.textContent = sub.title; ta.replaceWith(span);
+      };
+      ta.addEventListener('input', fit);
+      ta.addEventListener('blur', () => finish(true));
+      ta.addEventListener('keydown', ev => {
+        if (ev.isComposing || ev.keyCode === 229) return;
+        ev.stopPropagation();                                 // 열려 있는 다른 창의 Esc/Enter/Delete 단축키와 겹치지 않게
+        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); finish(true); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+        else if (ev.key === 'Delete' && !ta.value) { ev.preventDefault(); done = true; deleteSubTask(schedId, subId); }
+      });
+      span.replaceWith(ta); fit(); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    }
+    // 글자(.sel-text) 위에서 마우스를 누르면 카드 끌기를 꺼서, 드래그로 글자를 선택·복사할 수 있게 함 (글자 밖에서 누르면 다시 카드 끌기 가능)
+    document.addEventListener('mousedown', e => {
+      const card = e.target.closest && e.target.closest('[data-card-id]');
+      if (card) card.draggable = !e.target.closest('.sel-text, textarea');
+    }, true);
 
     function dropToSpecificDate(e, targetDateStr, section) {
       e.preventDefault();
@@ -2713,11 +2784,23 @@
         endH.innerHTML += optH;
       }
 
-      for (let m = 0; m < 60; m += 1) {
+      for (let m = 0; m < 60; m += 30) {
         const optM = `<option value="${m}">${String(m).padStart(2, '0')}분</option>`;
         startM.innerHTML += optM;
         endM.innerHTML += optM;
       }
+    }
+
+    // 분 선택: 기본 30분 단위(00/30), '1분 단위' 체크 시 00~59 (선택은 이 기기에 기억됨)
+    function setMinuteMode(fine, persist) {
+      ['schedStartMin', 'schedEndMin'].forEach(id => {
+        const sel = document.getElementById(id), cur = parseInt(sel.value);
+        sel.innerHTML = '';
+        for (let m = 0; m < 60; m += (fine ? 1 : 30)) sel.innerHTML += `<option value="${m}">${String(m).padStart(2, '0')}분</option>`;
+        sel.value = isNaN(cur) ? 0 : (fine ? cur : Math.floor(cur / 30) * 30);
+      });
+      document.getElementById('schedFineMinInput').checked = !!fine;
+      if (persist) { state.settings.fineMinutes = !!fine; saveLocalStorage(); }
     }
 
     function addModalSubTaskInput(value = '') {
@@ -2725,6 +2808,7 @@
       const div = document.createElement('div');
       div.className = 'flex items-center gap-2 sub-task-input-row';
       div.innerHTML = `
+        <span onpointerdown="startReorder(event, this, 'row')" title="끌어서 순서 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:14px;min-height:28px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-xs"></i></span>
         <input type="text" value="${escapeHtml(value)}" placeholder="세부 항목 내용 입력" class="sub-task-val w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
         <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash text-xs"></i></button>
       `;
@@ -2745,6 +2829,7 @@
           document.getElementById('schedTitleInput').value = sched.title;
           document.getElementById('schedStartDateInput').value = sched.startDate;
           document.getElementById('schedEndDateInput').value = sched.endDate;
+          setMinuteMode(!!state.settings.fineMinutes || (sched.startHour !== undefined && ((sched.startMin || 0) % 30 !== 0 || (sched.endMin || 0) % 30 !== 0)));
           if (sched.startHour !== undefined) {
             document.getElementById('schedStartHour').value = sched.startHour;
             document.getElementById('schedStartMin').value = sched.startMin || 0;
@@ -2766,11 +2851,14 @@
           : (startHour * 60 + startMin);
         // 시간 선택 범위(06:00~23:59)에 맞춰 기본 시작 시각을 보정
         startTotal = Math.max(6 * 60, Math.min(22 * 60 + 59, startTotal));
+        const fine = !!state.settings.fineMinutes || (startMin !== null && startMin % 30 !== 0) || (endMin !== null && endMin % 30 !== 0);
+        if (!fine && (startHour === null || startMin === null)) startTotal = Math.floor(startTotal / 30) * 30;   // 현재 시각이 속한 30분 칸에서 시작
         const durationEnd = startTotal + 60;
         const endDate = durationEnd >= 24 * 60 ? addDaysStr(dateStr, 1) : dateStr;
         const startH = startHour === null ? Math.floor(startTotal / 60) : startHour;
         const startM = startMin === null ? startTotal % 60 : startMin;
         const endTotal = endHour === null || endMin === null ? durationEnd : endHour * 60 + endMin;
+        setMinuteMode(fine);
         document.getElementById('schedStartDateInput').value = dateStr;
         document.getElementById('schedEndDateInput').value = (endHour === null || endMin === null) ? endDate : dateStr;
         document.getElementById('schedStartHour').value = startH;
@@ -2806,8 +2894,9 @@
         document.getElementById('schedCheckableInput').checked = false;   // 시간 일정은 원래 체크 가능하므로 할 일 표시는 해제   // 시간 일정으로 바꿀 때 시작/종료가 비어 있거나 같으면 기본값(9:00~10:00)
         const g = id => parseInt(document.getElementById(id).value);
         if (!(g('schedEndHour') * 60 + g('schedEndMin') > g('schedStartHour') * 60 + g('schedStartMin'))) {
-          document.getElementById('schedStartHour').value = 9; document.getElementById('schedStartMin').value = 0;
-          document.getElementById('schedEndHour').value = 10; document.getElementById('schedEndMin').value = 0;
+          const n = new Date(), st = Math.max(6 * 60, Math.min(22 * 60 + 59, Math.floor((n.getHours() * 60 + n.getMinutes()) / 30) * 30));
+          document.getElementById('schedStartHour').value = Math.floor(st / 60); document.getElementById('schedStartMin').value = st % 60;
+          document.getElementById('schedEndHour').value = Math.floor((st + 60) / 60); document.getElementById('schedEndMin').value = (st + 60) % 60;
         }
       }
     }
@@ -2836,16 +2925,56 @@
       setAllDayMode(true);
     }
 
+    // 모든 창 공통 키보드 단축키: Esc = 취소(닫기) · Enter = 추가/저장/확인 · Delete = 삭제 (글자를 입력 중일 땐 Delete가 글자만 지움)
+    const MODAL_KEYS = {
+      scheduleModal:       { form: true, close: () => closeScheduleModal(), ok: () => document.getElementById('scheduleForm').requestSubmit(),
+                             del: async () => { const id = document.getElementById('schedEditId').value; if (!id) return; state.activeDetailId = id; await handleDeleteCurrentDetail(); if (!state.schedules.some(x => x.id === id)) closeScheduleModal(); } },
+      scheduleDetailModal: { close: () => closeDetailModal(), ok: () => closeDetailModal(), del: () => handleDeleteCurrentDetail() },
+      dailySubTaskModal:   { close: () => closeDailySubTaskModal(), ok: () => saveDailySubTaskFromModal() },
+      protocolModal:       { form: true, close: () => closeProtocolModal(), ok: () => document.getElementById('protocolForm').requestSubmit() },
+      protocolDetailModal: { close: () => closeProtocolDetailModal(), ok: () => closeProtocolDetailModal(), del: () => handleDeleteProtocolFromDetail() },
+      categoryManageModal: { close: () => closeCategoryManageModal(), ok: () => addNewCategoryFromModal() },
+      seriesScopeModal:    { close: () => resolveSeriesScope(null) },
+      weeklySummaryModal:  { close: () => closeWeeklySummaryModal(), ok: () => copyWeeklySummary() },
+      printModal:          { close: () => closePrintModal(), ok: () => doPrintDay() },
+      backupModal:         { close: () => closeBackupModal() },
+      syncModal:           { close: () => closeSyncModal(), ok: () => { if (!document.getElementById('syncAuthBox').classList.contains('hidden')) syncSignIn(); } },
+    };
     document.addEventListener('keydown', e => {
-      const m = document.getElementById('scheduleModal');
-      if (!m || m.classList.contains('hidden')) return;
-      if (e.key === 'Escape') { e.preventDefault(); closeScheduleModal(); return; }
-      if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229 && e.target.classList && e.target.classList.contains('sub-task-val')) {
-        e.preventDefault();                                   // 저장되지 않고
-        if (!e.target.value.trim()) return;                   // 빈 칸이면 아무 일 없음
-        addModalSubTaskInput();                               // 새 세부 항목 칸을 추가하고 바로 입력
-        const inputs = document.querySelectorAll('#modalSubTasksContainer .sub-task-val');
-        inputs[inputs.length - 1].focus();
+      if (e.isComposing || e.keyCode === 229) return;
+      const open = [...document.querySelectorAll('div[id$="Modal"]')].filter(m => MODAL_KEYS[m.id] && !m.classList.contains('hidden'));
+      if (!open.length) return;
+      const modal = open[open.length - 1], cfg = MODAL_KEYS[modal.id], t = e.target, tag = t.tagName || '';
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable;
+      const isSubInput = modal.id === 'scheduleModal' && t.classList && t.classList.contains('sub-task-val');
+
+      if (e.key === 'Escape') { e.preventDefault(); cfg.close(); return; }
+
+      if (e.key === 'Enter') {
+        if (isSubInput) {                                       // 세부 항목 칸: Enter = 다음 세부 항목 추가
+          e.preventDefault();
+          if (!t.value.trim()) return;
+          addModalSubTaskInput();
+          const inputs = document.querySelectorAll('#modalSubTasksContainer .sub-task-val');
+          inputs[inputs.length - 1].focus();
+          return;
+        }
+        if (['TEXTAREA', 'BUTTON', 'A', 'SELECT'].includes(tag) || t.isContentEditable) return;
+        if (tag === 'INPUT' && ['checkbox', 'radio', 'file', 'color', 'button', 'submit', 'range'].includes(t.type)) return;
+        if (cfg.form && tag === 'INPUT') return;                // 폼 입력칸의 Enter는 기본 동작(저장)에 맡김
+        if (!cfg.ok) return;
+        e.preventDefault(); cfg.ok(); return;
+      }
+
+      if (e.key === 'Delete') {
+        if (isSubInput && !t.value) {                           // 빈 세부 항목 칸에서 Delete = 그 칸 삭제
+          e.preventDefault();
+          const row = t.closest('.sub-task-input-row'), next = row.nextElementSibling || row.previousElementSibling;
+          row.remove(); if (next) { const inp = next.querySelector('.sub-task-val'); if (inp) inp.focus(); }
+          return;
+        }
+        if (typing) return;
+        if (cfg.del) { e.preventDefault(); cfg.del(); }
       }
     });
 
@@ -2926,16 +3055,6 @@
       renderAll();
     }
 
-    function moveSubTask(schedId, subId, direction) {
-      const sched = state.schedules.find(s => s.id === schedId);
-      if (!sched || !Array.isArray(sched.subTasks)) return;
-      const index = sched.subTasks.findIndex(st => st.id === subId);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= sched.subTasks.length) return;
-      [sched.subTasks[index], sched.subTasks[nextIndex]] = [sched.subTasks[nextIndex], sched.subTasks[index]];
-      saveLocalStorage();
-      renderAll();
-    }
 
 
 
@@ -2954,16 +3073,17 @@
 
       const subContainer = document.getElementById('detailSubTasksList');
       subContainer.innerHTML = '';
+      subContainer.dataset.subList = sched.id;
 
       if (sched.subTasks && sched.subTasks.length > 0) {
         sched.subTasks.forEach(st => {
           const row = document.createElement('div');
           row.className = 'flex items-center gap-2 text-xs text-slate-700';
+          row.dataset.subId = st.id;
           row.innerHTML = `
+            <span onpointerdown="startReorder(event, this, 'sub')" title="끌어서 순서 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:12px;min-height:18px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-[10px]"></i></span>
             <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleSubTaskComplete('${sched.id}', '${st.id}'); openDetailModal('${sched.id}');" class="rounded text-slate-700 cursor-pointer">
-            <span class="flex-1 ${st.completed ? 'line-through text-slate-400' : ''}">${escapeHtml(st.title)}</span>
-            <button onclick="moveSubTask('${sched.id}', '${st.id}', -1); openDetailModal('${sched.id}')" title="위로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-up text-[10px]"></i></button>
-            <button onclick="moveSubTask('${sched.id}', '${st.id}', 1); openDetailModal('${sched.id}')" title="아래로" class="text-slate-400 hover:text-slate-800 px-1"><i class="fa-solid fa-chevron-down text-[10px]"></i></button>
+            <span class="select-text flex-1 ${st.completed ? 'line-through text-slate-400' : ''}">${escapeHtml(st.title)}</span>
           `;
           subContainer.appendChild(row);
         });
@@ -3944,13 +4064,33 @@
       .dday { display: inline-block; min-width: 46px; font-weight: bold; }
     `;
 
-    function printHtml(title, bodyHtml) {
+    // 일정 인쇄용 스타일: 글씨 크기(%)에 맞춰 모든 pt 크기와 칸 너비를 같은 비율로 키우고/줄이고, 글꼴을 바꿈
+    function buildPrintCss(scale, family) {
+      let css = PRINT_CSS.replace(/(\d+(?:\.\d+)?)pt/g, (m, n) => (Math.round(parseFloat(n) * scale * 100) / 100) + 'pt');
+      css = css.replace(/(min-width|margin-left): (\d+)px/g, (m, k, n) => `${k}: ${Math.round(n * scale)}px`);
+      css = css.replace('width: 11px; height: 11px;', `width: ${Math.round(11 * scale)}px; height: ${Math.round(11 * scale)}px;`);
+      return css.replace(/font-family: [^;]+;/, `font-family: ${family};`);
+    }
+    function updatePrintPreview() {
+      const scale = parseInt(document.getElementById('printScaleInput').value) / 100;
+      document.getElementById('printScaleLabel').textContent = Math.round(scale * 100) + '%';
+      const pv = document.getElementById('printPreview');
+      pv.style.fontFamily = document.getElementById('printFontSelect').value;
+      pv.style.fontSize = (13 * scale) + 'px';
+    }
+    function resetPrintStyle() {
+      document.getElementById('printFontSelect').selectedIndex = 0;
+      document.getElementById('printScaleInput').value = 100;
+      updatePrintPreview();
+    }
+
+    function printHtml(title, bodyHtml, css = PRINT_CSS) {
       const iframe = document.createElement('iframe');
       iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
       document.body.appendChild(iframe);
       const doc = iframe.contentWindow.document;
       doc.open();
-      doc.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${PRINT_CSS}</style></head><body>${bodyHtml}</body></html>`);
+      doc.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${css}</style></head><body>${bodyHtml}</body></html>`);
       doc.close();
       setTimeout(() => {
         iframe.contentWindow.focus();
@@ -3970,6 +4110,11 @@
               <span class="truncate"><span class="text-slate-400">[${escapeHtml(p.category)}]</span> ${escapeHtml(p.title)}</span>
             </label>`).join('')
         : '<p class="text-slate-400">등록된 프로토콜이 없어요.</p>';
+      const fontSel = document.getElementById('printFontSelect');
+      fontSel.value = state.settings.printFont || fontSel.options[0].value;
+      if (fontSel.selectedIndex < 0) fontSel.selectedIndex = 0;
+      document.getElementById('printScaleInput').value = state.settings.printScale || 100;
+      updatePrintPreview();
       document.getElementById('printModal').classList.remove('hidden');
     }
     function closePrintModal() { document.getElementById('printModal').classList.add('hidden'); }
@@ -4034,8 +4179,11 @@
         body += `<div class="block"><h2>메모</h2>${'<div class="memo-line"></div>'.repeat(8)}</div>`;
       }
 
+      const family = document.getElementById('printFontSelect').value;
+      const scalePct = parseInt(document.getElementById('printScaleInput').value) || 100;
+      state.settings.printFont = family; state.settings.printScale = scalePct; saveLocalStorage();   // 다음에도 같은 설정으로
       closePrintModal();
-      printHtml(`${date} 일정`, body);
+      printHtml(`${date} 일정`, body, buildPrintCss(scalePct / 100, family));
     }
 
     // ===================== 마감 D-day =====================
