@@ -752,7 +752,7 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">큰 계획 (메인 일정)</label>
-          <input type="text" id="schedTitleInput" required placeholder="예: 실험 결과 데이터 분석 및 발표 준비" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+          <input type="text" id="schedTitleInput" autocomplete="off" data-suggest="title" required placeholder="예: 실험 결과 데이터 분석 및 발표 준비" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -915,7 +915,7 @@
 
       <div>
         <label class="block text-xs font-bold text-slate-600 mb-1">세부 항목 내용</label>
-        <input type="text" id="dailySubTaskInputText" placeholder="세부 계획을 입력하세요" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+        <input type="text" id="dailySubTaskInputText" autocomplete="off" data-suggest="sub" placeholder="세부 계획을 입력하세요" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
@@ -944,12 +944,12 @@
             <select id="protoCategorySelect" onchange="onProtocolCategorySelectChange(this.value)" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none">
             </select>
           </div>
-          <input type="text" id="protoCatInput" required placeholder="예: Bio / PCR" class="mt-2 w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+          <input type="text" id="protoCatInput" autocomplete="off" data-suggest="protoCat" required placeholder="예: Bio / PCR" class="mt-2 w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
         </div>
 
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">실험 제목</label>
-          <input type="text" id="protoTitleInput" required placeholder="예: Standard PCR Amplification Protocol" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+          <input type="text" id="protoTitleInput" autocomplete="off" data-suggest="protoTitle" required placeholder="예: Standard PCR Amplification Protocol" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
         </div>
 
         <div>
@@ -1039,7 +1039,7 @@
 
       <div class="space-y-3">
         <div class="flex gap-2">
-          <input type="text" id="newCategoryNameInput" placeholder="새 카테고리 이름" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none">
+          <input type="text" id="newCategoryNameInput" autocomplete="off" placeholder="새 카테고리 이름" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none">
           <input type="color" id="newCategoryColorInput" value="#bae1ff" class="w-10 h-9 rounded-xl border border-slate-200 cursor-pointer bg-white p-1">
           <button onclick="addNewCategoryFromModal()" class="px-3.5 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-700 transition">추가</button>
         </div>
@@ -2652,9 +2652,9 @@
       if (id) openProtocolModal(id);
     }
 
-    function handleDeleteProtocolFromDetail() {
+    async function handleDeleteProtocolFromDetail() {
       const id = document.getElementById('activeProtocolDetailId').value;
-      if (confirm('이 프로토콜을 삭제하시겠습니까?')) {
+      if (await uiConfirm('이 프로토콜을 삭제하시겠습니까?')) {
         state.protocols = state.protocols.filter(p => p.id !== id);
         saveLocalStorage();
         closeProtocolDetailModal();
@@ -2692,11 +2692,11 @@
       saveLocalStorage();
       closeProtocolModal();
       renderAll();
-      alert('실험 프로토콜이 성공적으로 저장되었습니다! 🔬');
+      showToast('저장했어요', '실험 프로토콜이 저장되었어요 🔬');
     }
 
-    function deleteProtocol(id) {
-      if (confirm('이 프로토콜을 삭제하시겠습니까?')) {
+    async function deleteProtocol(id) {
+      if (await uiConfirm('이 프로토콜을 삭제하시겠습니까?')) {
         state.protocols = state.protocols.filter(p => p.id !== id);
         saveLocalStorage();
         renderAll();
@@ -2737,8 +2737,8 @@
       const name = nameInput.value.trim();
       const color = colorInput.value;
 
-      if (!name) { alert('카테고리 이름을 입력하세요.'); return; }
-      if (state.categories.some(c => c.name === name)) { alert('이미 존재하는 카테고리입니다.'); return; }
+      if (!name) { uiAlert('카테고리 이름을 입력하세요.'); return; }
+      if (state.categories.some(c => c.name === name)) { uiAlert('이미 존재하는 카테고리입니다.'); return; }
 
       state.categories.push({ name, color });
       nameInput.value = '';
@@ -2754,8 +2754,8 @@
       }
     }
 
-    function deleteCategory(catName) {
-      if (confirm(`'${catName}' 카테고리를 삭제하시겠습니까?`)) {
+    async function deleteCategory(catName) {
+      if (await uiConfirm(`'${catName}' 카테고리를 삭제하시겠습니까?`)) {
         state.categories = state.categories.filter(c => c.name !== catName);
         saveLocalStorage();
         renderCategoryManageList();
@@ -2802,7 +2802,7 @@
       div.className = 'flex items-center gap-2 sub-task-input-row';
       div.innerHTML = `
         <span onpointerdown="startReorder(event, this, 'row')" title="끌어서 순서 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:14px;min-height:28px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-xs"></i></span>
-        <input type="text" value="${escapeHtml(value)}" placeholder="세부 항목 내용 입력" class="sub-task-val w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+        <input type="text" autocomplete="off" data-suggest="sub" value="${escapeHtml(value)}" placeholder="세부 항목 내용 입력" class="sub-task-val w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
         <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash text-xs"></i></button>
       `;
       container.appendChild(div);
@@ -2997,7 +2997,7 @@
       if (!isTimeHidden) {
         const startTotal = (startHour * 60) + startMin;
         const endTotal = (endHour * 60) + endMin;
-        if (startTotal >= endTotal) { alert('종료 시간은 시작 시간보다 이후여야 합니다.'); return; }
+        if (startTotal >= endTotal) { uiAlert('종료 시간은 시작 시간보다 이후여야 합니다.'); return; }
       }
 
       const subTitles = [...document.querySelectorAll('.sub-task-val')].map(i => i.value.trim()).filter(Boolean);
@@ -3025,10 +3025,10 @@
         let seriesId = null;
         if (repeatType !== 'none') {
           const until = document.getElementById('schedRepeatUntil').value;
-          if (!until) { alert('반복 종료일을 입력해주세요.'); return; }
-          if (until < startDate) { alert('반복 종료일은 시작 날짜 이후여야 합니다.'); return; }
+          if (!until) { uiAlert('반복 종료일을 입력해주세요.'); return; }
+          if (until < startDate) { uiAlert('반복 종료일은 시작 날짜 이후여야 합니다.'); return; }
           const dows = [...document.querySelectorAll('.repeat-dow:checked')].map(b => parseInt(b.value));
-          if (repeatType === 'weekly' && dows.length === 0) { alert('반복할 요일을 하나 이상 선택해주세요.'); return; }
+          if (repeatType === 'weekly' && dows.length === 0) { uiAlert('반복할 요일을 하나 이상 선택해주세요.'); return; }
           dates = buildRepeatDates(startDate, repeatType, until, dows);
           seriesId = 'series_' + Date.now();
         }
@@ -3106,7 +3106,7 @@
       if (sched.seriesId) {
         scope = await askSeriesScope('삭제');
         if (!scope) return;
-      } else if (!confirm('이 계획을 삭제하시겠습니까?')) {
+      } else if (!await uiConfirm('이 계획을 삭제하시겠습니까?')) {
         return;
       }
       const removeIds = new Set(getSeriesTargets(sched, scope).map(s => s.id));
@@ -3220,11 +3220,11 @@
       return state.schedules.filter(s => isCheckable(s) && s.startDate === dateStr && s.endDate === dateStr && !s.completed);
     }
 
-    function carryOverIncomplete(dateStr) {
+    async function carryOverIncomplete(dateStr) {
       const items = getIncompleteCarryItems(dateStr);
       if (!items.length) return;
       const next = addDaysStr(dateStr, 1);
-      if (!confirm(`${shortDateLabel(dateStr)} 미완료 ${items.length}개를 ${shortDateLabel(next)}로 옮길까요?`)) return;
+      if (!await uiConfirm(`${shortDateLabel(dateStr)} 미완료 ${items.length}개를 ${shortDateLabel(next)}로 옮길까요?`)) return;
       items.forEach(s => { s.startDate = next; s.endDate = next; });
       saveLocalStorage();
       renderAll();
@@ -3237,11 +3237,11 @@
       return state.schedules.filter(s => isCheckable(s) && !s.completed && !s.seriesId && s.startDate === s.endDate && s.startDate < today && s.startDate >= limit);
     }
 
-    function carryPastIncompleteToToday() {
+    async function carryPastIncompleteToToday() {
       const items = getPastIncomplete();
       if (!items.length) return;
       const today = formatDateString(new Date());
-      if (!confirm(`지난 미완료 ${items.length}개를 오늘(${shortDateLabel(today)})로 옮길까요?`)) return;
+      if (!await uiConfirm(`지난 미완료 ${items.length}개를 오늘(${shortDateLabel(today)})로 옮길까요?`)) return;
       items.forEach(s => { s.startDate = today; s.endDate = today; });
       saveLocalStorage();
       renderAll();
@@ -3373,7 +3373,7 @@
       const div = document.createElement('div');
       div.className = 'flex items-center gap-1.5 reagent-row';
       div.innerHTML = `
-        <input type="text" class="reagent-name flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="시약 이름 (예: 2X Master mix)" value="${escapeHtml(r.name || '')}">
+        <input type="text" autocomplete="off" data-suggest="reagent" class="reagent-name flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="시약 이름 (예: 2X Master mix)" value="${escapeHtml(r.name || '')}">
         <input type="number" step="any" min="0" class="reagent-amount w-20 border border-slate-200 rounded-xl px-2.5 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="양" value="${r.amount ?? ''}">
         <select class="reagent-unit w-16 border border-slate-200 rounded-xl px-1.5 py-2 text-xs bg-white focus:outline-none">
           ${REAGENT_UNITS.map(u => `<option ${u === (r.unit || 'µL') ? 'selected' : ''}>${u}</option>`).join('')}
@@ -3787,9 +3787,9 @@
       renderPlateDesigner();
     }
 
-    function deletePlate() {
+    async function deletePlate() {
       const plate = getCurrentPlate();
-      if (!plate || !confirm(`'${plate.name}' 플레이트를 삭제할까요?`)) return;
+      if (!plate || !await uiConfirm(`'${plate.name}' 플레이트를 삭제할까요?`)) return;
       state.plates = state.plates.filter(p => p.id !== plate.id);
       plateState.currentId = state.plates.length ? state.plates[0].id : null;
       plateState.activeGroupId = null;
@@ -3821,21 +3821,21 @@
       return ids;
     }
 
-    function changePlateType(type) {
+    async function changePlateType(type) {
       const plate = getCurrentPlate();
       if (!plate || plate.type === type) return;
       const valid = new Set(plateWellIds(type));
       const lost = Object.keys(plate.wells).filter(id => !valid.has(id));
-      if (lost.length && !confirm(`${type}-well로 바꾸면 범위를 벗어나는 ${lost.length}개 웰의 배치가 지워져요. 계속할까요?`)) return;
+      if (lost.length && !await uiConfirm(`${type}-well로 바꾸면 범위를 벗어나는 ${lost.length}개 웰의 배치가 지워져요. 계속할까요?`)) return;
       lost.forEach(id => delete plate.wells[id]);
       plate.type = type;
       touchPlate(plate);
       renderPlateDesigner();
     }
 
-    function clearPlate() {
+    async function clearPlate() {
       const plate = getCurrentPlate();
-      if (!plate || !confirm('이 플레이트의 배치를 모두 지울까요?')) return;
+      if (!plate || !await uiConfirm('이 플레이트의 배치를 모두 지울까요?')) return;
       plate.wells = {};
       touchPlate(plate);
       renderPlateDesigner();
@@ -3861,12 +3861,12 @@
       renderPlateDesigner();
     }
 
-    function deletePlateGroup(id) {
+    async function deletePlateGroup(id) {
       const plate = getCurrentPlate();
       const g = plate && plate.groups.find(x => x.id === id);
       if (!g) return;
       const used = Object.values(plate.wells).filter(v => v === id).length;
-      if (!confirm(`'${g.name}' 그룹을 삭제할까요?${used ? ` 이 그룹이 칠해진 ${used}개 웰도 비워져요.` : ''}`)) return;
+      if (!await uiConfirm(`'${g.name}' 그룹을 삭제할까요?${used ? ` 이 그룹이 칠해진 ${used}개 웰도 비워져요.` : ''}`)) return;
       plate.groups = plate.groups.filter(x => x.id !== id);
       Object.keys(plate.wells).forEach(w => { if (plate.wells[w] === id) delete plate.wells[w]; });
       if (plateState.activeGroupId === id) plateState.activeGroupId = null;
@@ -3883,7 +3883,7 @@
       const plate = getCurrentPlate();
       if (!plate) return;
       const active = plateState.activeGroupId;
-      if (!active) { alert('먼저 오른쪽에서 그룹을 선택하세요.'); return; }
+      if (!active) { uiAlert('먼저 오른쪽에서 그룹을 선택하세요.'); return; }
       for (let r = Math.min(r1, r2); r <= Math.max(r1, r2); r++) {
         for (let c = Math.min(c1, c2); c <= Math.max(c1, c2); c++) {
           const id = ROW_LETTERS[r] + (c + 1);
@@ -4144,7 +4144,7 @@
 
     function doPrintDay() {
       const date = document.getElementById('printDateInput').value;
-      if (!date) { alert('날짜를 선택해주세요.'); return; }
+      if (!date) { uiAlert('날짜를 선택해주세요.'); return; }
       const includeDeadlines = document.getElementById('printIncludeDeadlines').checked;
       const includeMemo = document.getElementById('printIncludeMemo').checked;
       const protoIds = [...document.querySelectorAll('.print-proto:checked')].map(b => b.value);
@@ -4306,6 +4306,124 @@
       showToast(title, body);
       playBeep();
     }
+
+    // 입력 기록 추천: 이전에 쓴 제목·세부 계획·프로토콜 이름 등을 앱 글꼴과 디자인으로 보여줌 (↑↓ 선택 · Enter 입력 · Esc 닫기)
+    const SUGGEST_SOURCES = {
+      title:      () => state.schedules.map(x => x.title),
+      sub:        () => state.schedules.flatMap(x => (x.subTasks || []).map(t => t.title)),
+      protoTitle: () => state.protocols.map(x => x.title),
+      protoCat:   () => state.categories.map(c => (typeof c === 'string' ? c : c.name)),
+      reagent:    () => state.protocols.flatMap(x => (x.reagents || []).map(r => r.name)),
+    };
+    let sug = { box: null, input: null, items: [], idx: -1 };
+    function closeSuggest() { if (sug.box) { sug.box.remove(); sug.box = null; } sug.input = null; sug.items = []; sug.idx = -1; }
+    function paintSuggest() {
+      [...sug.box.children].forEach((el, i) => el.classList.toggle('bg-slate-100', i === sug.idx));
+    }
+    function pickSuggest(i) {
+      const input = sug.input; if (!input || !sug.items[i]) return;
+      input.value = sug.items[i]; closeSuggest();
+      input.focus(); input.setSelectionRange(input.value.length, input.value.length);
+    }
+    function renderSuggest(input) {
+      const src = SUGGEST_SOURCES[input.dataset.suggest];
+      const q = input.value.trim().toLowerCase();
+      const seen = new Set(), items = [];
+      if (src && q) {
+        for (const raw of src().slice().reverse()) {                         // 최근에 쓴 것부터
+          const t = String(raw || '').trim(), k = t.toLowerCase();
+          if (!t || seen.has(k)) continue;
+          seen.add(k);
+          if (k.includes(q) && k !== q) items.push(t);
+          if (items.length >= 6) break;
+        }
+      }
+      if (!items.length) { closeSuggest(); return; }
+      if (!sug.box) {
+        sug.box = document.createElement('div');
+        sug.box.className = 'bg-white border border-slate-200 rounded-xl shadow-xl py-1 overflow-hidden';
+        sug.box.addEventListener('mousedown', e => {                         // 입력칸이 포커스를 잃지 않게
+          e.preventDefault();
+          const b = e.target.closest('[data-i]'); if (b) pickSuggest(parseInt(b.dataset.i));
+        });
+        document.body.appendChild(sug.box);
+      }
+      sug.input = input; sug.items = items; sug.idx = -1;
+      const r = input.getBoundingClientRect();
+      sug.box.style.cssText = `position:fixed;left:${r.left}px;top:${r.bottom + 4}px;width:${r.width}px;z-index:90;`;
+      sug.box.innerHTML = items.map((t, i) => `<button type="button" data-i="${i}" style="font-family:inherit" class="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 truncate">${escapeHtml(t)}</button>`).join('');
+    }
+    document.addEventListener('input', e => { if (e.target.matches && e.target.matches('input[data-suggest]')) renderSuggest(e.target); });
+    document.addEventListener('focusout', e => { if (sug.input && e.target === sug.input) closeSuggest(); });
+    const placeSuggest = () => {                                           // 스크롤·창 크기 변경 시 입력칸을 따라 위치 갱신 (입력칸이 화면 밖이면 닫음)
+      if (!sug.box || !sug.input) return;
+      const r = sug.input.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) { closeSuggest(); return; }
+      sug.box.style.left = r.left + 'px'; sug.box.style.top = (r.bottom + 4) + 'px'; sug.box.style.width = r.width + 'px';
+    };
+    window.addEventListener('resize', placeSuggest);
+    document.addEventListener('scroll', placeSuggest, true);
+    document.addEventListener('keydown', e => {
+      if (!sug.box || e.target !== sug.input || e.isComposing || e.keyCode === 229) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); e.stopImmediatePropagation();
+        const n = sug.items.length;
+        sug.idx = e.key === 'ArrowDown' ? (sug.idx + 1) % n : (sug.idx - 1 + n) % n;
+        paintSuggest();
+      } else if (e.key === 'Enter' && sug.idx >= 0) {                          // 추천 항목을 고른 상태의 Enter는 입력만 (저장·추가 동작 안 함)
+        e.preventDefault(); e.stopImmediatePropagation(); pickSuggest(sug.idx);
+      } else if (e.key === 'Escape') {                                         // Esc는 추천 목록만 닫음 (창은 그대로)
+        e.preventDefault(); e.stopImmediatePropagation(); closeSuggest();
+      }
+    }, true);
+    // 그 밖의 글자 입력칸에도 브라우저 기본 기록 목록(시스템 글꼴)이 뜨지 않게
+    document.addEventListener('focusin', e => {
+      const t = e.target;
+      if (t.tagName === 'INPUT' && (!t.type || t.type === 'text') && !t.hasAttribute('autocomplete')) t.setAttribute('autocomplete', 'off');
+    });
+
+    // 확인/알림 창: 브라우저 기본 창 대신 앱 디자인으로 표시 (Enter = 확인 · Esc = 취소)
+    function uiDialog({ message, confirmText = '확인', cancelText = '취소', showCancel = true, danger = false }) {
+      return new Promise(resolve => {
+        const wrap = document.createElement('div');
+        wrap.id = 'uiDialogModal';
+        wrap.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4';
+        wrap.innerHTML = `
+          <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4" role="alertdialog" aria-modal="true">
+            <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-line break-words"></p>
+            <div class="flex justify-end gap-2">
+              ${showCancel ? `<button type="button" data-act="cancel" style="font-family:inherit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">${cancelText}</button>` : ''}
+              <button type="button" data-act="ok" style="font-family:inherit" class="px-4 py-2 text-xs font-semibold rounded-xl text-white transition ${danger ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-800 hover:bg-slate-700'}">${confirmText}</button>
+            </div>
+          </div>`;
+        wrap.querySelector('p').textContent = message;
+        const prevFocus = document.activeElement;
+        const okBtn = wrap.querySelector('[data-act="ok"]'), cancelBtn = wrap.querySelector('[data-act="cancel"]');
+        const close = v => {
+          document.removeEventListener('keydown', onKey, true);
+          wrap.remove();
+          if (prevFocus && prevFocus.focus) { try { prevFocus.focus(); } catch (e) {} }
+          resolve(v);
+        };
+        const onKey = e => {
+          if (e.isComposing || e.keyCode === 229) return;
+          e.stopImmediatePropagation();                          // 아래에 열려 있는 다른 창의 단축키와 겹치지 않게
+          if (e.key === 'Escape') { e.preventDefault(); close(false); }
+          else if (e.key === 'Enter') { e.preventDefault(); close(document.activeElement === cancelBtn ? false : true); }
+          else if (e.key === 'Tab' && cancelBtn) { e.preventDefault(); (document.activeElement === okBtn ? cancelBtn : okBtn).focus(); }
+          else if (e.key !== 'F5' && e.key !== 'F12') e.preventDefault();
+        };
+        wrap.addEventListener('click', e => {
+          const act = e.target.dataset && e.target.dataset.act;
+          if (act === 'ok') close(true); else if (act === 'cancel' || e.target === wrap) close(!showCancel);
+        });
+        document.addEventListener('keydown', onKey, true);
+        document.body.appendChild(wrap);
+        okBtn.focus();
+      });
+    }
+    const uiConfirm = (message, opts) => uiDialog({ message, danger: /삭제|지울|지우고|비워/.test(message), ...opts });
+    const uiAlert = message => uiDialog({ message, showCancel: false });
 
     function showToast(title, body) {
       const wrap = document.getElementById('toastContainer');
@@ -4541,10 +4659,10 @@
       } catch (e) { return false; }
     }
 
-    function applyBackupImport() {
+    async function applyBackupImport() {
       if (!pendingBackup) return;
       const mode = (document.querySelector('input[name="backupMode"]:checked') || {}).value || 'merge';
-      if (mode === 'replace' && !confirm('지금 데이터를 모두 지우고 파일 내용으로 바꿀까요?\n(로그인 중이면 다른 기기의 데이터에도 똑같이 반영돼요. 불러온 직후에는 "되돌리기"로 복구할 수 있어요.)')) return;
+      if (mode === 'replace' && !await uiConfirm('지금 데이터를 모두 지우고 파일 내용으로 바꿀까요?\n(로그인 중이면 다른 기기의 데이터에도 똑같이 반영돼요. 불러온 직후에는 "되돌리기"로 복구할 수 있어요.)')) return;
       if (!saveImportSnapshot()) {
         showBackupMessage('현재 데이터를 임시 보관하지 못해서 불러오기를 중단했어요. (브라우저 저장 공간 부족)', true);
         return;
@@ -4572,10 +4690,10 @@
       showBackupMessage(summary, !persistedOk());
     }
 
-    function undoLastImport() {
+    async function undoLastImport() {
       const snap = readImportSnapshot();
       if (!snap) return;
-      if (!confirm('직전 불러오기를 취소하고, 그 전 상태로 되돌릴까요?')) return;
+      if (!await uiConfirm('직전 불러오기를 취소하고, 그 전 상태로 되돌릴까요?')) return;
       const d = snap.data;
       state.schedules = Array.isArray(d.schedules) ? d.schedules : [];
       state.protocols = Array.isArray(d.protocols) ? d.protocols : [];
@@ -4846,9 +4964,9 @@
     }
     window.syncVerify = () => verify(false);
     window.syncNow = async () => { await pull().catch(() => {}); await flush(); };
-    window.syncDeleteLegacy = () => {
+    window.syncDeleteLegacy = async () => {
       if (!meta.verifiedAt) return;
-      if (confirm('검증이 끝난 기존 localStorage 원본 보존본을 삭제할까요?\n(클라우드와 이 기기 데이터는 그대로예요. 백업 JSON 파일은 따로 보관해 두세요.)')) { localStorage.removeItem(LEGACY); updUI(); msg('원본 보존본을 삭제했어요.'); }
+      if (await uiConfirm('검증이 끝난 기존 localStorage 원본 보존본을 삭제할까요?\n(클라우드와 이 기기 데이터는 그대로예요. 백업 JSON 파일은 따로 보관해 두세요.)')) { localStorage.removeItem(LEGACY); updUI(); msg('원본 보존본을 삭제했어요.'); }
     };
 
     // ---------- 로그인 ----------
