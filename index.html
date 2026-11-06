@@ -1120,14 +1120,7 @@
             <label for="printFontSelect" class="block text-xs font-bold text-slate-600">글꼴</label>
             <button type="button" onclick="resetPrintStyle()" class="text-[10px] text-slate-400 hover:text-slate-600 underline">기본값</button>
           </div>
-          <select id="printFontSelect" onchange="updatePrintPreview()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
-            <option value="'Malgun Gothic','Apple SD Gothic Neo',-apple-system,sans-serif">맑은 고딕 (기본)</option>
-            <option value="'NanumGothic','Nanum Gothic','Malgun Gothic',sans-serif">나눔고딕</option>
-            <option value="'Dotum','돋움','Apple SD Gothic Neo',sans-serif">돋움</option>
-            <option value="'Gulim','굴림','Apple SD Gothic Neo',sans-serif">굴림</option>
-            <option value="'NanumMyeongjo','Nanum Myeongjo','Batang','바탕','AppleMyungjo',serif">나눔명조 / 바탕 (명조체)</option>
-            <option value="'D2Coding','Consolas','Menlo','Malgun Gothic',monospace">고정폭 (D2Coding)</option>
-          </select>
+          <select id="printFontSelect" onchange="updatePrintPreview()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300"></select>
         </div>
         <div>
           <label for="printScaleInput" class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1"><span>글씨 크기</span><span id="printScaleLabel">100%</span></label>
@@ -1135,7 +1128,7 @@
           <div class="flex justify-between text-[10px] text-slate-400"><span>작게</span><span>보통</span><span>크게</span></div>
         </div>
         <div id="printPreview" class="border border-slate-200 rounded-xl bg-[#f8fafc] px-3 py-2 text-slate-700 leading-snug overflow-hidden">가나다라마바사 ABC abc 123<br>10:00–11:00 샘플 일정</div>
-        <p class="text-[10px] text-slate-400 leading-relaxed">글꼴은 이 기기에 설치된 글꼴로 인쇄돼요. 없는 글꼴은 비슷한 기본 글꼴로 대신 나와요.</p>
+        <p class="text-[10px] text-slate-400 leading-relaxed">글꼴은 처음 고를 때 파일을 내려받느라 잠깐 걸릴 수 있어요. (굵은 글씨는 기본 글꼴을 진하게 만든 모양으로 나와요)</p>
       </div>
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
         <button onclick="closePrintModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
@@ -4064,18 +4057,32 @@
       .dday { display: inline-block; min-width: 46px; font-weight: bold; }
     `;
 
+    // 일정 인쇄용 글꼴: index.html 옆 fonts/ 폴더의 파일을 사용 (글꼴을 고를 때만 내려받음)
+    const PRINT_FONTS = [
+      { id: 'pretendard', name: 'Pretendard',      family: 'Pretendard',        file: 'Pretendard-Regular.woff' },
+      { id: 'noto',       name: 'Noto Sans KR',    family: 'Noto Sans KR',      file: 'NotoSansKR-Regular.woff' },
+      { id: 'barun',      name: '나눔바른고딕',      family: 'NanumBarunGothic',  file: 'NanumBarunGothic.woff' },
+      { id: 'square',     name: '나눔스퀘어',        family: 'NanumSquare_ac',    file: 'NanumSquare-Regular.woff' },
+      { id: 'pyeojin',    name: '평진고딕',          family: 'Pyeojin Gothic',    file: 'PyeojinGothic-Regular.woff' },
+      { id: 'wonju',      name: '원주체',            family: 'Wonju TTF',         file: 'WonjuTTF-Regular.woff' },
+    ];
+    const fontFaceCss = f => `@font-face { font-family: '${f.family}'; src: url('${new URL('fonts/' + f.file, location.href).href}') format('woff'); font-weight: normal; font-style: normal; font-display: swap; }`;
+    const fontStack = f => `'${f.family}', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif`;
+    const pickPrintFont = id => PRINT_FONTS.find(f => f.id === id) || PRINT_FONTS[0];
+    (() => { const st = document.createElement('style'); st.textContent = PRINT_FONTS.map(fontFaceCss).join('\n'); document.head.appendChild(st); })();   // 미리보기용 (사용할 때만 실제로 내려받음)
+
     // 일정 인쇄용 스타일: 글씨 크기(%)에 맞춰 모든 pt 크기와 칸 너비를 같은 비율로 키우고/줄이고, 글꼴을 바꿈
-    function buildPrintCss(scale, family) {
+    function buildPrintCss(scale, font) {
       let css = PRINT_CSS.replace(/(\d+(?:\.\d+)?)pt/g, (m, n) => (Math.round(parseFloat(n) * scale * 100) / 100) + 'pt');
       css = css.replace(/(min-width|margin-left): (\d+)px/g, (m, k, n) => `${k}: ${Math.round(n * scale)}px`);
       css = css.replace('width: 11px; height: 11px;', `width: ${Math.round(11 * scale)}px; height: ${Math.round(11 * scale)}px;`);
-      return css.replace(/font-family: [^;]+;/, `font-family: ${family};`);
+      return fontFaceCss(font) + '\n' + css.replace(/font-family: [^;]+;/, `font-family: ${fontStack(font)};`);
     }
     function updatePrintPreview() {
       const scale = parseInt(document.getElementById('printScaleInput').value) / 100;
       document.getElementById('printScaleLabel').textContent = Math.round(scale * 100) + '%';
       const pv = document.getElementById('printPreview');
-      pv.style.fontFamily = document.getElementById('printFontSelect').value;
+      pv.style.fontFamily = fontStack(pickPrintFont(document.getElementById('printFontSelect').value));
       pv.style.fontSize = (13 * scale) + 'px';
     }
     function resetPrintStyle() {
@@ -4084,7 +4091,7 @@
       updatePrintPreview();
     }
 
-    function printHtml(title, bodyHtml, css = PRINT_CSS) {
+    function printHtml(title, bodyHtml, css = PRINT_CSS, font = null) {
       const iframe = document.createElement('iframe');
       iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
       document.body.appendChild(iframe);
@@ -4092,11 +4099,15 @@
       doc.open();
       doc.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${css}</style></head><body>${bodyHtml}</body></html>`);
       doc.close();
-      setTimeout(() => {
+      const go = () => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
         setTimeout(() => iframe.remove(), 1000);
-      }, 300);
+      };
+      if (font && doc.fonts && doc.fonts.load) {       // 글꼴 파일이 다 내려받아진 뒤에 인쇄 (실패하거나 15초가 지나면 기본 글꼴로 인쇄)
+        Promise.race([doc.fonts.load(`16px '${font.family}'`).then(() => doc.fonts.ready), new Promise(r => setTimeout(r, 15000))])
+          .then(() => setTimeout(go, 100), () => go());
+      } else setTimeout(go, 300);
     }
 
     // ===================== 당일 인쇄 =====================
@@ -4111,8 +4122,8 @@
             </label>`).join('')
         : '<p class="text-slate-400">등록된 프로토콜이 없어요.</p>';
       const fontSel = document.getElementById('printFontSelect');
-      fontSel.value = state.settings.printFont || fontSel.options[0].value;
-      if (fontSel.selectedIndex < 0) fontSel.selectedIndex = 0;
+      if (!fontSel.options.length) fontSel.innerHTML = PRINT_FONTS.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+      fontSel.value = pickPrintFont(state.settings.printFontId).id;
       document.getElementById('printScaleInput').value = state.settings.printScale || 100;
       updatePrintPreview();
       document.getElementById('printModal').classList.remove('hidden');
@@ -4179,11 +4190,12 @@
         body += `<div class="block"><h2>메모</h2>${'<div class="memo-line"></div>'.repeat(8)}</div>`;
       }
 
-      const family = document.getElementById('printFontSelect').value;
+      const font = pickPrintFont(document.getElementById('printFontSelect').value);
       const scalePct = parseInt(document.getElementById('printScaleInput').value) || 100;
-      state.settings.printFont = family; state.settings.printScale = scalePct; saveLocalStorage();   // 다음에도 같은 설정으로
+      state.settings.printFontId = font.id; state.settings.printScale = scalePct; saveLocalStorage();   // 다음에도 같은 설정으로
       closePrintModal();
-      printHtml(`${date} 일정`, body, buildPrintCss(scalePct / 100, family));
+      showToast('인쇄 준비 중', `${font.name} 글꼴을 불러오고 있어요`);
+      printHtml(`${date} 일정`, body, buildPrintCss(scalePct / 100, font), font);
     }
 
     // ===================== 마감 D-day =====================
