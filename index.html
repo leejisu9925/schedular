@@ -116,11 +116,14 @@
         <button onclick="closeSidebar()" class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="메뉴 닫기"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div class="relative mb-6">
+      <div class="relative mb-2">
         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
         <input id="globalSearchInput" type="text" autocomplete="off" placeholder="Search (Ctrl+K)" oninput="renderSearchResults()" onfocus="renderSearchResults()"
                class="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
       </div>
+      <button onclick="openQuickAddModal()" class="w-full mb-6 flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl border border-dashed border-slate-300 text-slate-600 hover:bg-white hover:border-slate-400 transition">
+        <span><i class="fa-solid fa-bolt mr-1.5 text-amber-500"></i>빠른 추가</span><span class="text-[10px] text-slate-400 font-normal">Alt+N</span>
+      </button>
 
       <nav class="space-y-1.5">
         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-3">MENU</div>
@@ -143,6 +146,10 @@
 
         <button onclick="switchTab('design')" id="nav-design" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-[#f1f5f9] transition nav-btn">
           <span class="flex items-center gap-2.5">🧫 Plate Design</span>
+        </button>
+
+        <button onclick="switchTab('cells')" id="nav-cells" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-[#f1f5f9] transition nav-btn">
+          <span class="flex items-center gap-2.5">🧬 Cell Passage</span>
         </button>
 
         <button onclick="switchTab('calc')" id="nav-calc" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-[#f1f5f9] transition nav-btn">
@@ -245,6 +252,9 @@
             </button>
             <button onclick="openPrintModal()" class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
               <i class="fa-solid fa-print"></i> 오늘 일정 인쇄
+            </button>
+            <button onclick="openQuickAddModal()" class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
+              <i class="fa-solid fa-bolt text-amber-500"></i> 빠른 추가
             </button>
           </div>
         </div>
@@ -410,6 +420,7 @@
               <button onclick="changeTodoListWeek(1)" class="px-3 py-1.5 rounded-lg bg-white shadow-2xs hover:bg-slate-100 transition border border-slate-200">
                 다음 주 <i class="fa-solid fa-chevron-right ml-1"></i>
               </button>
+              <button onclick="goToToday()" title="오늘이 있는 주로 이동해서 오늘 블록으로 스크롤" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white shadow-2xs hover:bg-slate-700 transition">오늘</button>
             </div>
           </div>
 
@@ -508,6 +519,19 @@
     </section>
 
     <!-- 6. [탭 6] Calculators -->
+    <section id="tab-content-cells" class="space-y-6 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">🧬 세포 계대 관리</h3>
+          <p class="text-xs text-slate-500 mt-1">"계대 완료"를 누르면 P 숫자가 올라가고, 다음 계대일이 일정(체크할 수 있는 할 일)으로 자동으로 들어가요.</p>
+        </div>
+        <button onclick="openCellModal()" class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition flex items-center justify-center gap-2 shadow-2xs">
+          <i class="fa-solid fa-plus"></i><span>세포주 추가</span>
+        </button>
+      </div>
+      <div id="cellListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+    </section>
+
     <section id="tab-content-calc" class="space-y-6 hidden">
       <!-- 희석 계산기 -->
       <div class="soft-card rounded-2xl p-4 md:p-6 bg-white border border-slate-200 space-y-4">
@@ -793,17 +817,17 @@
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>시작 시간</label>
             <div class="flex gap-1.5">
-              <select id="schedStartHour" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
+              <select id="schedStartHour" onchange="fixEndTime()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
               <span class="self-center font-bold">:</span>
-              <select id="schedStartMin" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
+              <select id="schedStartMin" onchange="fixEndTime()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
             </div>
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>종료 시간</label>
             <div class="flex gap-1.5">
-              <select id="schedEndHour" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
+              <select id="schedEndHour" onchange="fixEndTime()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
               <span class="self-center font-bold">:</span>
-              <select id="schedEndMin" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
+              <select id="schedEndMin" onchange="fixEndTime()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
             </div>
           </div>
           <label class="sm:col-span-2 flex items-center gap-2 text-[11px] text-slate-500 cursor-pointer w-fit">
@@ -1117,7 +1141,11 @@
       </div>
       <div>
         <label class="block text-xs font-bold text-slate-600 mb-1">날짜</label>
-        <input type="date" id="printDateInput" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+        <input type="date" id="printDateInput" onchange="renderPrintPlanList()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1.5">인쇄할 일정 <span class="font-normal text-slate-400">(⠿ 끌어서 순서 변경 · 체크 해제하면 제외)</span></label>
+        <div id="printPlanList" class="bg-[#f8fafc] border border-slate-200 rounded-xl p-2 space-y-1.5 max-h-48 overflow-y-auto text-xs"></div>
       </div>
       <div class="space-y-1.5 text-xs text-slate-700">
         <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="printIncludeDeadlines" checked class="rounded"> 다가오는 마감 (7일 이내)</label>
@@ -1139,6 +1167,14 @@
           <label for="printScaleInput" class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1"><span>글씨 크기</span><span id="printScaleLabel">100%</span></label>
           <input type="range" id="printScaleInput" min="70" max="200" step="5" value="100" oninput="updatePrintPreview()" class="w-full">
           <div class="flex justify-between text-[10px] text-slate-400"><span>작게</span><span>보통</span><span>크게</span></div>
+        </div>
+        <div>
+          <label for="printGapItem" class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1"><span>큰 계획 사이 간격</span><span id="printGapItemLabel">6</span></label>
+          <input type="range" id="printGapItem" min="0" max="40" step="1" value="6" oninput="updatePrintPreview()" class="w-full">
+        </div>
+        <div>
+          <label for="printGapSub" class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1"><span>세부 계획 사이 간격</span><span id="printGapSubLabel">2</span></label>
+          <input type="range" id="printGapSub" min="0" max="24" step="1" value="2" oninput="updatePrintPreview()" class="w-full">
         </div>
         <div id="printPreview" class="border border-slate-200 rounded-xl bg-[#f8fafc] px-3 py-2 text-slate-700 leading-snug overflow-hidden">가나다라마바사 ABC abc 123<br>10:00–11:00 샘플 일정</div>
         <p class="text-[10px] text-slate-400 leading-relaxed">글꼴은 처음 고를 때 파일을 내려받느라 잠깐 걸릴 수 있어요. (굵은 글씨는 기본 글꼴을 진하게 만든 모양으로 나와요)</p>
@@ -1241,6 +1277,71 @@
   <button id="backToTopBtn" onclick="scrollPageToTop()" aria-label="맨 위로 이동" title="맨 위로" class="fixed bottom-5 right-5 z-[65] w-11 h-11 rounded-full bg-slate-800 text-white shadow-lg hover:bg-slate-700 transition flex items-center justify-center opacity-0 pointer-events-none">
     <i class="fa-solid fa-arrow-up"></i>
   </button>
+  <div id="cellModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <form id="cellForm" onsubmit="handleSaveCell(event)" class="bg-white rounded-2xl max-w-md w-full p-4 md:p-6 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
+      <input type="hidden" id="cellEditId">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 id="cellModalTitle" class="text-base font-bold text-slate-800">세포주 추가</h3>
+        <button type="button" onclick="closeCellModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">세포주 이름</label>
+        <input id="cellNameInput" type="text" autocomplete="off" required placeholder="예) HeLa, HEK293T" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">현재 계대 (P)</label>
+          <input id="cellPassageInput" type="number" min="0" max="999" step="1" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">계대 주기 (일)</label>
+          <input id="cellIntervalInput" type="number" min="1" max="365" step="1" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">마지막 계대일</label>
+          <input id="cellLastDateInput" type="date" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">분주 비율</label>
+          <input id="cellRatioInput" type="text" autocomplete="off" placeholder="예) 1:5" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">메모 <span class="font-normal text-slate-400">(배지·배양 조건 등)</span></label>
+        <textarea id="cellNotesInput" rows="3" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none"></textarea>
+      </div>
+      <div id="cellHistoryBox" class="hidden bg-[#f8fafc] border border-slate-200 rounded-xl px-3 py-2">
+        <div class="text-[11px] font-bold text-slate-500 mb-1">최근 계대 기록</div>
+        <div id="cellHistoryList" class="text-[11px] text-slate-500 space-y-0.5"></div>
+      </div>
+      <p class="text-[10px] text-slate-400 leading-relaxed">저장하면 다음 계대일(마지막 계대일 + 주기)이 일정에 자동으로 들어가요.</p>
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+        <button type="button" id="cellDeleteBtn" onclick="deleteCellFromModal()" class="hidden mr-auto px-3 py-2 text-xs font-semibold rounded-xl bg-white text-red-500 border border-red-200 hover:bg-red-50 transition">삭제</button>
+        <button type="button" onclick="closeCellModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
+        <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition">저장</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="quickAddModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-start md:items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-4 md:p-6 shadow-2xl space-y-3 mt-16 md:mt-0">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-bolt text-amber-500 mr-1.5"></i>빠른 추가</h3>
+        <button onclick="closeQuickAddModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <input id="quickAddInput" type="text" autocomplete="off" oninput="updateQuickAddPreview()" placeholder="예) 내일 14시 세미나 1시간"
+             class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+      <div id="quickAddPreview" class="min-h-[44px] bg-[#f8fafc] border border-slate-200 rounded-xl px-3.5 py-2 text-xs leading-relaxed"></div>
+      <p class="text-[10px] text-slate-400 leading-relaxed">11/12 오후 3시 미팅 · 다음주 월요일 종일 PCR · 금요일 10:00-11:30 랩미팅 · 3일 뒤 2시~4시 데이터 정리<br>시간이 없으면 종일 할 일로 들어가요. 시간만 있고 길이가 없으면 1시간이에요.</p>
+      <div class="flex justify-end gap-2 pt-1">
+        <button onclick="closeQuickAddModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
+        <button onclick="submitQuickAdd()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition">추가 (Enter)</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="fixed top-4 right-4 left-4 md:left-auto z-[70] space-y-2 flex flex-col items-end"></div>
 
   <!-- JavaScript -->
@@ -1260,6 +1361,7 @@
       contextSelectedDate: null,
       activeDetailId: null,
       plates: [],
+      cells: [],
       settings: { notifyEnabled: false, notifyLead: 10 }
     };
 
@@ -1383,6 +1485,9 @@
         const savedPlates = localStorage.getItem('app_plate_maps_v1');
         if (savedPlates) state.plates = JSON.parse(savedPlates);
 
+        const savedCells = localStorage.getItem('app_cell_lines_v1');
+        if (savedCells) state.cells = JSON.parse(savedCells);
+
         const savedSettings = localStorage.getItem('app_settings_v1');
         if (savedSettings) state.settings = { ...state.settings, ...JSON.parse(savedSettings) };
       } catch (e) {
@@ -1396,6 +1501,7 @@
         localStorage.setItem('app_protocols_v4', JSON.stringify(state.protocols));
         localStorage.setItem('app_protocol_categories_v3', JSON.stringify(state.categories));
         localStorage.setItem('app_plate_maps_v1', JSON.stringify(state.plates));
+        localStorage.setItem('app_cell_lines_v1', JSON.stringify(state.cells));
         localStorage.setItem('app_settings_v1', JSON.stringify(state.settings));
       } catch (e) {
         console.error('LocalStorage save error:', e);
@@ -1421,6 +1527,18 @@
       state.selectedDate = formatDateString(today);
       state.currentCalendarDate = new Date();
       renderAll();
+      scrollToTodayBlock();
+    }
+    // Weekly To Do List가 보이는 중이면 오늘 요일 블록으로 화면을 옮기고 잠깐 강조
+    function scrollToTodayBlock() {
+      const box = document.getElementById('weeklyTodoListContainer');
+      if (!box || box.offsetParent === null) return;
+      const el = box.querySelector(`[data-day="${formatDateString(new Date())}"]`);
+      if (!el) return;
+      el.style.scrollMarginTop = '12px';
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('ring-2', 'ring-slate-500');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-slate-500'), 1600);
     }
 
     function setupBackToTopButton() {
@@ -1475,7 +1593,7 @@
         activeBtn.classList.remove('text-slate-600');
       }
 
-      const titles = { home: 'Home', calendar: 'Calendar', weekly: 'Weekly Schedule', protocol: 'Protocols', design: 'Plate Design', calc: 'Calculators' };
+      const titles = { home: 'Home', calendar: 'Calendar', weekly: 'Weekly Schedule', protocol: 'Protocols', design: 'Plate Design', cells: 'Cell Passage', calc: 'Calculators' };
       const topTitleEl = document.getElementById('topNavTitleText');
       if (topTitleEl) topTitleEl.innerText = titles[tabId] || '대시보드';
       const mobileTitleEl = document.getElementById('mobileTabTitle');
@@ -1541,6 +1659,7 @@
       renderProtocolList();
       renderCategoryFilterTags();
       renderPlateDesigner();
+      renderCellList();
       refreshBackupUI();
     }
 
@@ -2259,6 +2378,7 @@
         else if (idx === 6) headerColorClass = 'text-blue-600';
 
         const dayCard = document.createElement('div');
+        dayCard.dataset.day = dateStr;
         dayCard.className = `soft-card rounded-2xl p-3 md:p-5 border bg-white ${isToday ? 'border-slate-400 ring-1 ring-slate-300' : 'border-slate-200'}`;
 
         let dayHtml = `
@@ -2387,7 +2507,7 @@
     //  - 'card': Weekly To Do List 카드 (다른 날/오전·오후로 옮기기는 카드 자체를 끌기)
     //  - 'sub' : 카드 안의 세부 계획,  'row': 일정 등록·수정 창의 세부 항목 입력칸
     let reorder = null;
-    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row' };
+    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row', print: '.print-plan-row' };
     function startReorder(e, handle, kind = 'card') {
       if (e.button !== undefined && e.button !== 0) return;
       const sel = REORDER_SEL[kind], item = handle.closest(sel);
@@ -2422,7 +2542,7 @@
       item.style.opacity = ''; item.style.outline = '';
       const now = [...list.children];
       if (now.every((c, i) => c === before[i])) return;                 // 순서가 안 바뀌었으면 저장 안 함
-      if (kind === 'row') return;                                       // 등록 창: 저장할 때 화면 순서대로 반영됨
+      if (kind === 'row' || kind === 'print') return;                   // 등록 창·인쇄 창: 저장할 때 / 인쇄할 때 화면 순서대로 반영됨
       if (kind === 'card') {
         now.map(c => c.dataset.cardId).filter(Boolean).forEach((id, i) => { const sc = state.schedules.find(x => x.id === id); if (sc) sc.ord = i; });
       } else {
@@ -2485,6 +2605,7 @@
 
     function toggleMainScheduleComplete(id) {
       const sched = state.schedules.find(s => s.id === id);
+      if (sched && sched.cellId && !sched.completed && state.cells.some(c => c.id === sched.cellId)) { completeCellPassage(sched.cellId); return; }   // 계대 일정을 체크하면 계대 완료 처리
       if (sched) { sched.completed = !sched.completed; saveLocalStorage(); renderAll(); }
     }
 
@@ -2521,6 +2642,7 @@
     function deleteSubTask(schedId, subId) {
       const sched = state.schedules.find(s => s.id === schedId);
       if (sched && sched.subTasks) {
+        pushUndo('세부 계획을 삭제했어요');
         sched.subTasks = sched.subTasks.filter(st => st.id !== subId);
         saveLocalStorage();
         renderAll();
@@ -2668,6 +2790,7 @@
     async function handleDeleteProtocolFromDetail() {
       const id = document.getElementById('activeProtocolDetailId').value;
       if (await uiConfirm('이 프로토콜을 삭제하시겠습니까?')) {
+        pushUndo('프로토콜을 삭제했어요');
         state.protocols = state.protocols.filter(p => p.id !== id);
         saveLocalStorage();
         closeProtocolDetailModal();
@@ -2710,6 +2833,7 @@
 
     async function deleteProtocol(id) {
       if (await uiConfirm('이 프로토콜을 삭제하시겠습니까?')) {
+        pushUndo('프로토콜을 삭제했어요');
         state.protocols = state.protocols.filter(p => p.id !== id);
         saveLocalStorage();
         renderAll();
@@ -2769,10 +2893,24 @@
 
     async function deleteCategory(catName) {
       if (await uiConfirm(`'${catName}' 카테고리를 삭제하시겠습니까?`)) {
+        pushUndo('카테고리를 삭제했어요');
         state.categories = state.categories.filter(c => c.name !== catName);
         saveLocalStorage();
         renderCategoryManageList();
       }
+    }
+
+    // 종료 시간이 시작 시간보다 앞이거나 같으면 시작 시간 기준 1시간 뒤로 자동 설정 (자정을 넘기면 23:59)
+    function fixEndTime() {
+      const g = id => parseInt(document.getElementById(id).value);
+      const st = g('schedStartHour') * 60 + g('schedStartMin'), en = g('schedEndHour') * 60 + g('schedEndMin');
+      if (isNaN(st) || isNaN(en) || en > st) return;
+      const ne = Math.min(st + 60, 23 * 60 + 59);
+      if (ne <= st) return;
+      const endMinSel = document.getElementById('schedEndMin');
+      if (![...endMinSel.options].some(o => parseInt(o.value) === ne % 60)) setMinuteMode(true);   // 30분 단위 목록에 없는 분이면 1분 단위로 전환
+      document.getElementById('schedEndHour').value = Math.floor(ne / 60);
+      document.getElementById('schedEndMin').value = ne % 60;
     }
 
     function populateTimeSelects() {
@@ -2944,6 +3082,8 @@
       weeklySummaryModal:  { close: () => closeWeeklySummaryModal(), ok: () => copyWeeklySummary() },
       printModal:          { close: () => closePrintModal(), ok: () => doPrintDay() },
       backupModal:         { close: () => closeBackupModal() },
+      quickAddModal:       { close: () => closeQuickAddModal(), ok: () => submitQuickAdd() },
+      cellModal:           { form: true, close: () => closeCellModal(), ok: () => document.getElementById('cellForm').requestSubmit(), del: () => deleteCellFromModal() },
       syncModal:           { close: () => closeSyncModal(), ok: () => { if (!document.getElementById('syncAuthBox').classList.contains('hidden')) syncSignIn(); } },
     };
     document.addEventListener('keydown', e => {
@@ -3010,7 +3150,7 @@
       if (!isTimeHidden) {
         const startTotal = (startHour * 60) + startMin;
         const endTotal = (endHour * 60) + endMin;
-        if (startTotal >= endTotal) { uiAlert('종료 시간은 시작 시간보다 이후여야 합니다.'); return; }
+        if (startTotal >= endTotal) { fixEndTime(); if (startTotal >= 23 * 60 + 59) { uiAlert('시작 시간을 23:59보다 이르게 설정해 주세요.'); return; } return handleSaveSchedule(e); }   // 종료가 앞서면 시작+1시간으로 자동 맞춘 뒤 저장
       }
 
       const subTitles = [...document.querySelectorAll('.sub-task-val')].map(i => i.value.trim()).filter(Boolean);
@@ -3123,6 +3263,7 @@
         return;
       }
       const removeIds = new Set(getSeriesTargets(sched, scope).map(s => s.id));
+      pushUndo(removeIds.size > 1 ? `일정 ${removeIds.size}개를 삭제했어요` : '일정을 삭제했어요');
       state.schedules = state.schedules.filter(s => !removeIds.has(s.id));
       saveLocalStorage();
       closeDetailModal();
@@ -3803,6 +3944,7 @@
     async function deletePlate() {
       const plate = getCurrentPlate();
       if (!plate || !await uiConfirm(`'${plate.name}' 플레이트를 삭제할까요?`)) return;
+      pushUndo('플레이트를 삭제했어요');
       state.plates = state.plates.filter(p => p.id !== plate.id);
       plateState.currentId = state.plates.length ? state.plates[0].id : null;
       plateState.activeGroupId = null;
@@ -3849,6 +3991,7 @@
     async function clearPlate() {
       const plate = getCurrentPlate();
       if (!plate || !await uiConfirm('이 플레이트의 배치를 모두 지울까요?')) return;
+      pushUndo('플레이트 배치를 지웠어요', plate.id);
       plate.wells = {};
       touchPlate(plate);
       renderPlateDesigner();
@@ -3880,6 +4023,7 @@
       if (!g) return;
       const used = Object.values(plate.wells).filter(v => v === id).length;
       if (!await uiConfirm(`'${g.name}' 그룹을 삭제할까요?${used ? ` 이 그룹이 칠해진 ${used}개 웰도 비워져요.` : ''}`)) return;
+      pushUndo('그룹을 삭제했어요', plate.id);
       plate.groups = plate.groups.filter(x => x.id !== id);
       Object.keys(plate.wells).forEach(w => { if (plate.wells[w] === id) delete plate.wells[w]; });
       if (plateState.activeGroupId === id) plateState.activeGroupId = null;
@@ -4053,7 +4197,9 @@
       .item { padding: 6px 0; border-bottom: 1px dashed #cbd5e1; }
       .box { display: inline-block; width: 11px; height: 11px; border: 1.3px solid #334155; margin-right: 7px; vertical-align: -1px; font-size: 8px; line-height: 9px; text-align: center; }
       .time { display: inline-block; min-width: 96px; color: #475569; font-size: 9.5pt; }
-      .subitem { margin-left: 120px; font-size: 9.5pt; padding: 2px 0; color: #334155; }
+      .subitem { margin-left: 24px; font-size: 9.5pt; padding: 2px 0; color: #334155; }
+      .num { display: inline-block; min-width: 22px; font-weight: bold; color: #475569; }
+      .snum { display: inline-block; min-width: 16px; color: #64748b; }
       .tag { font-size: 7.5pt; border: 1px solid #ef4444; color: #ef4444; padding: 0 4px; border-radius: 3px; margin-left: 6px; }
       .cat { font-size: 8pt; font-weight: normal; color: #64748b; margin-left: 6px; }
       .note { background: #fffbeb; border: 1px solid #fcd34d; padding: 6px 9px; border-radius: 6px; font-size: 9.5pt; white-space: pre-line; margin-bottom: 8px; }
@@ -4085,10 +4231,11 @@
     (() => { const st = document.createElement('style'); st.textContent = PRINT_FONTS.map(fontFaceCss).join('\n'); document.head.appendChild(st); })();   // 미리보기용 (사용할 때만 실제로 내려받음)
 
     // 일정 인쇄용 스타일: 글씨 크기(%)에 맞춰 모든 pt 크기와 칸 너비를 같은 비율로 키우고/줄이고, 글꼴을 바꿈
-    function buildPrintCss(scale, font) {
+    function buildPrintCss(scale, font, gapItem = 6, gapSub = 2) {
       let css = PRINT_CSS.replace(/(\d+(?:\.\d+)?)pt/g, (m, n) => (Math.round(parseFloat(n) * scale * 100) / 100) + 'pt');
       css = css.replace(/(min-width|margin-left): (\d+)px/g, (m, k, n) => `${k}: ${Math.round(n * scale)}px`);
       css = css.replace('width: 11px; height: 11px;', `width: ${Math.round(11 * scale)}px; height: ${Math.round(11 * scale)}px;`);
+      css = css.replace('.item { padding: 6px 0;', `.item { padding: ${gapItem}px 0;`).replace('padding: 2px 0; color: #334155;', `padding: ${gapSub}px 0; color: #334155;`);   // 큰 계획 사이 / 세부 계획 사이 간격
       return fontFaceCss(font) + '\n' + css.replace(/font-family: [^;]+;/, `font-family: ${fontStack(font)};`);
     }
     function updatePrintPreview() {
@@ -4097,10 +4244,13 @@
       const pv = document.getElementById('printPreview');
       pv.style.fontFamily = fontStack(pickPrintFont(document.getElementById('printFontSelect').value));
       pv.style.fontSize = (13 * scale) + 'px';
+      document.getElementById('printGapItemLabel').textContent = document.getElementById('printGapItem').value;
+      document.getElementById('printGapSubLabel').textContent = document.getElementById('printGapSub').value;
     }
     function resetPrintStyle() {
       document.getElementById('printFontSelect').selectedIndex = 0;
       document.getElementById('printScaleInput').value = 100;
+      document.getElementById('printGapItem').value = 6; document.getElementById('printGapSub').value = 2;
       updatePrintPreview();
     }
 
@@ -4138,8 +4288,24 @@
       if (!fontSel.options.length) fontSel.innerHTML = PRINT_FONTS.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
       fontSel.value = pickPrintFont(state.settings.printFontId).id;
       document.getElementById('printScaleInput').value = state.settings.printScale || 100;
+      document.getElementById('printGapItem').value = state.settings.printGapItem ?? 6;
+      document.getElementById('printGapSub').value = state.settings.printGapSub ?? 2;
       updatePrintPreview();
+      renderPrintPlanList();
       document.getElementById('printModal').classList.remove('hidden');
+    }
+    // 인쇄할 일정 목록: 기본은 시간 순서, ⠿ 손잡이로 순서를 바꾸고 체크로 포함/제외 (이 순서는 인쇄에만 적용돼요)
+    function renderPrintPlanList() {
+      const date = document.getElementById('printDateInput').value, box = document.getElementById('printPlanList');
+      const items = state.schedules
+        .filter(s => date >= s.startDate && date <= s.endDate)
+        .sort((a, b) => ((a.startHour ?? -1) * 60 + (a.startMin || 0)) - ((b.startHour ?? -1) * 60 + (b.startMin || 0)));
+      box.innerHTML = items.length ? items.map(s => `
+        <div data-print-id="${s.id}" class="print-plan-row flex items-center gap-2 bg-white rounded-lg border border-slate-200 px-2 py-1.5">
+          <span onpointerdown="startReorder(event, this, 'print')" title="끌어서 순서 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:14px;min-height:20px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-[11px]"></i></span>
+          <input type="checkbox" class="print-plan rounded" value="${s.id}" checked>
+          <span class="truncate flex-1">${escapeHtml(s.title)}</span>
+        </div>`).join('') : '<p class="text-slate-400 px-1 py-1">이 날짜에는 일정이 없어요.</p>';
     }
     function closePrintModal() { document.getElementById('printModal').classList.add('hidden'); }
 
@@ -4162,17 +4328,17 @@
       const includeMemo = document.getElementById('printIncludeMemo').checked;
       const protoIds = [...document.querySelectorAll('.print-proto:checked')].map(b => b.value);
 
-      const items = state.schedules
-        .filter(s => date >= s.startDate && date <= s.endDate)
-        .sort((a, b) => ((a.startHour ?? -1) * 60 + (a.startMin || 0)) - ((b.startHour ?? -1) * 60 + (b.startMin || 0)));
+      const items = [...document.querySelectorAll('#printPlanList .print-plan-row')]
+        .filter(r => r.querySelector('.print-plan').checked)
+        .map(r => state.schedules.find(x => x.id === r.dataset.printId)).filter(Boolean);
 
       let body = `<h1>${getKoreanDateLabel(date)}</h1><div class="sub">일일 실험 일정 · ✨🐥🍀 Scheduler</div>`;
       body += '<h2>일정</h2>';
-      if (!items.length) body += '<p class="empty">등록된 일정이 없습니다.</p>';
-      items.forEach(s => {
+      if (!items.length) body += '<p class="empty">인쇄할 일정이 없습니다.</p>';
+      items.forEach((s, i) => {                                   // 시간 대신 1. 2. 3. 번호 (세부 계획은 1) 2) 3))
         body += `<div class="item block">
-          <span class="box">${isDone(s) ? '✓' : ''}</span><span class="time">${scheduleTimeText(s)}</span><b>${escapeHtml(s.title)}</b>${s.isDeadline ? '<span class="tag">마감</span>' : ''}
-          ${(s.subTasks || []).map(st => `<div class="subitem"><span class="box">${st.completed ? '✓' : ''}</span>${escapeHtml(st.title)}</div>`).join('')}
+          <span class="box">${isDone(s) ? '✓' : ''}</span><span class="num">${i + 1}.</span><b>${escapeHtml(s.title)}</b>${s.isDeadline ? '<span class="tag">마감</span>' : ''}
+          ${(s.subTasks || []).map((st, j) => `<div class="subitem"><span class="box">${st.completed ? '✓' : ''}</span><span class="snum">${j + 1})</span>${escapeHtml(st.title)}</div>`).join('')}
         </div>`;
       });
 
@@ -4205,10 +4371,11 @@
 
       const font = pickPrintFont(document.getElementById('printFontSelect').value);
       const scalePct = parseInt(document.getElementById('printScaleInput').value) || 100;
-      state.settings.printFontId = font.id; state.settings.printScale = scalePct; saveLocalStorage();   // 다음에도 같은 설정으로
+      const gapItem = parseInt(document.getElementById('printGapItem').value), gapSub = parseInt(document.getElementById('printGapSub').value);
+      state.settings.printFontId = font.id; state.settings.printScale = scalePct; state.settings.printGapItem = gapItem; state.settings.printGapSub = gapSub; saveLocalStorage();   // 다음에도 같은 설정으로
       closePrintModal();
       showToast('인쇄 준비 중', `${font.name} 글꼴을 불러오고 있어요`);
-      printHtml(`${date} 일정`, body, buildPrintCss(scalePct / 100, font), font);
+      printHtml(`${date} 일정`, body, buildPrintCss(scalePct / 100, font, gapItem, gapSub), font);
     }
 
     // ===================== 마감 D-day =====================
@@ -4438,6 +4605,265 @@
     const uiConfirm = (message, opts) => uiDialog({ message, danger: /삭제|지울|지우고|비워/.test(message), ...opts });
     const uiAlert = message => uiDialog({ message, showCancel: false });
 
+    // ===================== 빠른 추가: 한 줄로 일정 만들기 =====================
+    // 예) 내일 14시 세미나 1시간 · 11/12 오후 3시 미팅 · 다음주 월요일 종일 PCR · 금요일 10:00-11:30 랩미팅
+    function parseQuickAdd(text, now = new Date()) {
+      let t = ' ' + String(text || '').replace(/\s+/g, ' ').trim() + ' ';
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+      const take = (re, fn) => { const m = t.match(re); if (!m) return false; fn(m); t = t.replace(re, ' '); return true; };
+      const DOW = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
+      const MM = '(1[0-2]|0?[1-9])', DD = '(3[01]|[12]\\d|0?[1-9])';
+      let date = null, allDay = false;
+
+      take(/\s종일\s/, () => { allDay = true; });
+      // ── 날짜 ──
+      take(/\s(\d{4})[-./](\d{1,2})[-./](\d{1,2})\s/, m => { date = new Date(+m[1], +m[2] - 1, +m[3]); });
+      if (!date) take(/\s(오늘|내일|모레|글피)\s/, m => { date = addD(today, { 오늘: 0, 내일: 1, 모레: 2, 글피: 3 }[m[1]]); });
+      if (!date) take(/\s(\d{1,3})\s*일\s*(?:뒤|후)\s/, m => { date = addD(today, +m[1]); });
+      if (!date) take(/\s(\d{1,2})\s*주\s*(?:뒤|후)\s/, m => { date = addD(today, 7 * +m[1]); });
+      if (!date) take(/\s(이번\s?주|다다음\s?주|다음\s?주|담주)\s*([월화수목금토일])(?:요일)?\s/, m => {
+        const off = /다다음/.test(m[1]) ? 14 : /다음|담/.test(m[1]) ? 7 : 0;
+        date = addD(today, off - today.getDay() + DOW[m[2]]);                       // 일요일 시작 주 기준
+      });
+      if (!date) take(/\s([월화수목금토일])요일\s/, m => { date = addD(today, (DOW[m[1]] - today.getDay() + 7) % 7); });
+      const yearFix = d => { if (d < today) d.setFullYear(d.getFullYear() + 1); return d; };    // 이미 지난 날짜면 내년으로
+      if (!date) take(new RegExp('\\s' + MM + '\\s*월\\s*' + DD + '\\s*일?\\s'), m => { date = yearFix(new Date(today.getFullYear(), +m[1] - 1, +m[2])); });
+      if (!date) take(new RegExp('\\s' + MM + '[/.]' + DD + '\\s'), m => { date = yearFix(new Date(today.getFullYear(), +m[1] - 1, +m[2])); });
+      if (!date) take(new RegExp('\\s' + DD + '\\s*일\\s'), m => { date = new Date(today.getFullYear(), today.getMonth(), +m[1]); if (date < today) date.setMonth(date.getMonth() + 1); });
+
+      // ── 시간 ──
+      const pts = [];
+      t = t.replace(/\s정오\s/, () => { pts.push({ mer: '오후', h: 12, mi: 0 }); return ' '; });
+      t = t.replace(/(?:(오전|오후|아침|새벽|낮|저녁|밤)\s*)?(\d{1,2})\s*(?:시(?!간)\s*(?:(\d{1,2})\s*분|(반))?|:(\d{2}))/g,
+        (all, mer, h, mi, half, mi2) => { pts.push({ mer, h: +h, mi: half ? 30 : (mi ? +mi : (mi2 ? +mi2 : 0)) }); return ' '; });
+      const to24 = (p, inherit) => {
+        const mer = p.mer || inherit;
+        if (mer === '오전' || mer === '아침' || mer === '새벽') return p.h === 12 ? 0 : p.h;
+        if (mer === '오후' || mer === '낮' || mer === '저녁' || mer === '밤') return p.h < 12 ? p.h + 12 : p.h;
+        if (p.h >= 13 || p.h === 0 || p.h === 12) return p.h;
+        return p.h <= 6 ? p.h + 12 : p.h;                                         // 표시가 없으면 1~6시는 오후, 7~11시는 오전으로 봄
+      };
+      let startMin = null, endMin = null;
+      if (pts.length) {
+        startMin = to24(pts[0]) * 60 + pts[0].mi;
+        if (pts[1]) {
+          endMin = to24(pts[1], pts[0].mer) * 60 + pts[1].mi;
+          if (endMin <= startMin && !pts[1].mer && pts[1].h < 12) endMin += 12 * 60;
+        }
+      }
+      let dur = null;
+      t = t.replace(/(\d{1,2})\s*시간(?:\s*(반|(\d{1,2})\s*분))?(?:\s*동안|짜리|정도)?/, (all, h, b, mm) => { dur = +h * 60 + (b === '반' ? 30 : (mm ? +mm : 0)); return ' '; });
+      if (dur === null) t = t.replace(/(\d{1,3})\s*분(?:\s*동안|짜리|정도)?/, (all, m) => { dur = +m; return ' '; });
+
+      if (startMin !== null && !allDay) {
+        if (endMin === null || endMin <= startMin) endMin = startMin + (dur || 60);
+        endMin = Math.min(endMin, 23 * 60 + 59);
+        if (endMin <= startMin) { startMin = 23 * 60 + 58; endMin = 23 * 60 + 59; }
+      } else { startMin = endMin = null; allDay = true; }
+
+      const title = t.replace(/\s(부터|까지)\s/g, ' ').replace(/\s[~\-–]\s/g, ' ').replace(/\s+/g, ' ').trim().replace(/^[,~\-–·]+|[,~\-–·]+$/g, '').trim();
+      return { title, date: formatDateString(date || today), allDay, startMin, endMin };
+    }
+
+    function openQuickAddModal() {
+      const inp = document.getElementById('quickAddInput');
+      inp.value = ''; updateQuickAddPreview();
+      document.getElementById('quickAddModal').classList.remove('hidden');
+      setTimeout(() => inp.focus(), 0);
+    }
+    function closeQuickAddModal() { document.getElementById('quickAddModal').classList.add('hidden'); }
+    function quickAddLabel(p) {
+      const d = parseDateStr(p.date), hm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+      return `${d.getMonth() + 1}월 ${d.getDate()}일(${DOW_KO[d.getDay()]}) · ${p.allDay ? '종일 · 체크할 수 있는 할 일' : hm(p.startMin) + '–' + hm(p.endMin)}`;
+    }
+    function updateQuickAddPreview() {
+      const text = document.getElementById('quickAddInput').value.trim(), el = document.getElementById('quickAddPreview');
+      if (!text) { el.innerHTML = '<span class="text-slate-400">날짜·시간·제목을 한 줄로 적어 보세요.</span>'; return; }
+      const p = parseQuickAdd(text);
+      el.innerHTML = p.title
+        ? `<span class="font-bold text-slate-800">${escapeHtml(p.title)}</span><br><span class="text-slate-500">📅 ${quickAddLabel(p)}</span>`
+        : '<span class="text-amber-600">제목도 함께 적어 주세요. (예: 내일 14시 세미나)</span>';
+    }
+    function submitQuickAdd() {
+      const p = parseQuickAdd(document.getElementById('quickAddInput').value);
+      if (!p.title) { updateQuickAddPreview(); return; }
+      state.schedules.push({
+        id: 'sched_' + Date.now() + '_q', title: p.title, isDeadline: false, checkable: p.allDay,
+        startDate: p.date, endDate: p.date,
+        startHour: p.allDay ? undefined : Math.floor(p.startMin / 60), startMin: p.allDay ? undefined : p.startMin % 60,
+        endHour: p.allDay ? undefined : Math.floor(p.endMin / 60), endMin: p.allDay ? undefined : p.endMin % 60,
+        color: getPalette()[0], completed: false, subTasks: []
+      });
+      saveLocalStorage(); closeQuickAddModal(); renderAll();
+      showToast('추가했어요', `${p.title}\n${quickAddLabel(p)}`);
+    }
+    document.addEventListener('keydown', e => {                       // Alt+N: 어디서든 빠른 추가 열기
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'n' && document.getElementById('quickAddModal').classList.contains('hidden')) { e.preventDefault(); openQuickAddModal(); }
+    });
+
+    // ===================== 세포 계대 관리 =====================
+    // 세포주마다 {현재 P 숫자, 마지막 계대일, 계대 주기(일), 분주 비율, 메모, 기록}을 저장하고,
+    // 다음 계대일(= 마지막 계대일 + 주기)을 '체크할 수 있는 종일 할 일'로 일정에 자동 반영해요.
+    const cellColor = () => (state.categories.find(c => c.name === 'Cell Culture') || {}).color || '#baffc9';
+    const cellSchedId = c => 'cellsched_' + c.id;
+    const cellNextDate = c => addDaysStr(c.lastDate, c.interval);
+
+    function syncCellSchedule(c, resetDone) {
+      const id = cellSchedId(c), date = cellNextDate(c);
+      const base = { title: `🧫 ${c.name} 계대 (P${c.passage} → P${c.passage + 1})`, startDate: date, endDate: date, isDeadline: false, checkable: true, color: cellColor(), cellId: c.id };
+      const cur = state.schedules.find(x => x.id === id);
+      if (!cur) state.schedules.push({ id, ...base, completed: false, subTasks: [] });
+      else { Object.assign(cur, base); if (resetDone) cur.completed = false; }
+    }
+    function rebuildCellSchedules() { state.cells.forEach(c => syncCellSchedule(c)); }
+
+    function cellStatus(c) {
+      const diff = daysBetweenStr(formatDateString(new Date()), cellNextDate(c));
+      if (diff < 0) return { text: `계대 ${-diff}일 지남`, cls: 'bg-red-50 text-red-600 border-red-200' };
+      if (diff === 0) return { text: '오늘 계대', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+      if (diff === 1) return { text: '내일 계대', cls: 'bg-sky-50 text-sky-700 border-sky-200' };
+      return { text: `D-${diff}`, cls: 'bg-slate-50 text-slate-600 border-slate-200' };
+    }
+
+    function renderCellList() {
+      const box = document.getElementById('cellListContainer');
+      if (!box) return;
+      const list = [...state.cells].sort((a, b) => cellNextDate(a).localeCompare(cellNextDate(b)));   // 계대일이 가까운 순
+      box.innerHTML = list.length ? list.map(c => {
+        const st = cellStatus(c), next = cellNextDate(c);
+        return `
+        <div class="soft-card bg-white rounded-2xl border border-slate-200 p-4 space-y-3" style="border-left: 4px solid ${cellColor()}">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-base font-black text-slate-800 break-words">${escapeHtml(c.name)}</span>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-white">P${c.passage}</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-1">마지막 계대 ${shortDateLabel(c.lastDate)} · 주기 ${c.interval}일${c.ratio ? ` · 분주 ${escapeHtml(c.ratio)}` : ''}</div>
+            </div>
+            <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border flex-shrink-0 ${st.cls}">${st.text}</span>
+          </div>
+          <div class="text-xs text-slate-600">다음 계대 <b>${shortDateLabel(next)}</b> · P${c.passage} → P${c.passage + 1}</div>
+          ${c.notes ? `<div class="text-xs text-slate-500 whitespace-pre-wrap break-words bg-[#f8fafc] border border-slate-200 rounded-xl px-3 py-2">${escapeHtml(c.notes)}</div>` : ''}
+          <div class="flex gap-2">
+            <button onclick="completeCellPassage('${c.id}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition"><i class="fa-solid fa-check mr-1"></i>계대 완료 (P${c.passage + 1}로)</button>
+            <button onclick="openCellModal('${c.id}')" class="px-3 py-2 text-xs font-semibold rounded-xl bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition">수정</button>
+          </div>
+        </div>`;
+      }).join('') : '<div class="col-span-full text-center text-xs text-slate-400 py-10 border border-dashed border-slate-300 rounded-2xl">등록된 세포주가 없어요. 오른쪽 위 "세포주 추가"로 시작해 보세요.</div>';
+    }
+
+    function openCellModal(id) {
+      const c = id ? state.cells.find(x => x.id === id) : null;
+      const set = (el, v) => { document.getElementById(el).value = v; };
+      set('cellEditId', c ? c.id : '');
+      document.getElementById('cellModalTitle').textContent = c ? '세포주 수정' : '세포주 추가';
+      set('cellNameInput', c ? c.name : ''); set('cellPassageInput', c ? c.passage : 1);
+      set('cellLastDateInput', c ? c.lastDate : formatDateString(new Date())); set('cellIntervalInput', c ? c.interval : 3);
+      set('cellRatioInput', c ? (c.ratio || '') : ''); set('cellNotesInput', c ? (c.notes || '') : '');
+      document.getElementById('cellDeleteBtn').classList.toggle('hidden', !c);
+      const hist = c && c.history ? [...c.history].reverse().slice(0, 8) : [];
+      const hb = document.getElementById('cellHistoryBox');
+      hb.classList.toggle('hidden', !hist.length);
+      document.getElementById('cellHistoryList').innerHTML = hist.map(h => `<div class="flex justify-between"><span>${shortDateLabel(h.date)}</span><span class="font-bold text-slate-600">P${h.passage}</span></div>`).join('');
+      document.getElementById('cellModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('cellNameInput').focus(), 0);
+    }
+    function closeCellModal() { document.getElementById('cellModal').classList.add('hidden'); }
+
+    function handleSaveCell(e) {
+      e.preventDefault();
+      const g = id => document.getElementById(id).value;
+      const name = g('cellNameInput').trim(), passage = parseInt(g('cellPassageInput')), interval = parseInt(g('cellIntervalInput')), lastDate = g('cellLastDateInput');
+      if (!name) { uiAlert('세포주 이름을 입력해 주세요.'); return; }
+      if (!(passage >= 0 && passage <= 999)) { uiAlert('계대 횟수(P)는 0~999 사이 숫자로 입력해 주세요.'); return; }
+      if (!(interval >= 1 && interval <= 365)) { uiAlert('계대 주기는 1~365일 사이로 입력해 주세요.'); return; }
+      if (!lastDate) { uiAlert('마지막 계대일을 선택해 주세요.'); return; }
+      const fields = { name: name.slice(0, 60), passage, lastDate, interval, ratio: g('cellRatioInput').trim().slice(0, 30), notes: g('cellNotesInput').trim().slice(0, 500) };
+      const id = g('cellEditId');
+      let c = id && state.cells.find(x => x.id === id);
+      if (c) Object.assign(c, fields);
+      else { c = { id: 'cell_' + Date.now(), ...fields, history: [] }; state.cells.push(c); }
+      syncCellSchedule(c);
+      saveLocalStorage(); closeCellModal(); renderAll();
+    }
+
+    async function deleteCell(id) {
+      const c = state.cells.find(x => x.id === id);
+      if (!c || !await uiConfirm(`'${c.name}' 세포주를 삭제할까요?\n(자동으로 만들어진 계대 일정도 함께 삭제돼요.)`)) return;
+      pushUndo('세포주를 삭제했어요');
+      state.cells = state.cells.filter(x => x.id !== id);
+      state.schedules = state.schedules.filter(x => x.id !== cellSchedId(c));
+      saveLocalStorage(); closeCellModal(); renderAll();
+    }
+    function deleteCellFromModal() { const id = document.getElementById('cellEditId').value; if (id) return deleteCell(id); }
+
+    // 계대 완료: P 숫자 +1, 오늘을 마지막 계대일로, 다음 계대 일정을 새로 만듦 (잘못 눌렀으면 알림의 '되돌리기')
+    function completeCellPassage(id) {
+      const c = state.cells.find(x => x.id === id);
+      if (!c) return;
+      const prev = { passage: c.passage, lastDate: c.lastDate, history: JSON.parse(JSON.stringify(c.history || [])) };
+      const today = formatDateString(new Date());
+      c.passage += 1; c.lastDate = today;
+      c.history = [...(c.history || []), { date: today, passage: c.passage }].slice(-30);
+      syncCellSchedule(c, true);
+      saveLocalStorage(); renderAll();
+      showUndoToast(`${c.name} P${c.passage} 계대 완료 · 다음 ${shortDateLabel(cellNextDate(c))}`, () => {
+        const cc = state.cells.find(x => x.id === id);
+        if (!cc) return;
+        Object.assign(cc, prev); syncCellSchedule(cc, true);
+        saveLocalStorage(); renderAll();
+      });
+    }
+
+    // 삭제 되돌리기: 삭제 직전 상태를 보관하고, 삭제된 것만 되살림 (그 뒤에 한 다른 수정은 그대로 둠)
+    const undoStack = [];
+    function pushUndo(label, plateId) {
+      undoStack.push({ plateId: plateId || null, snap: JSON.stringify({ schedules: state.schedules, protocols: state.protocols, categories: state.categories, plates: state.plates, cells: state.cells }) });
+      if (undoStack.length > 20) undoStack.shift();
+      showUndoToast(label);
+    }
+    function undoLast() {
+      const u = undoStack.pop();
+      if (!u) return false;
+      const snap = JSON.parse(u.snap), keyOf = (k, x) => k === 'categories' ? x.name : x.id;
+      ['schedules', 'protocols', 'categories', 'plates', 'cells'].forEach(k => {
+        const cur = state[k], now = new Map(cur.map(x => [keyOf(k, x), x]));
+        (snap[k] || []).forEach((x, idx) => {
+          const key = keyOf(k, x), have = now.get(key);
+          if (!have) cur.splice(Math.min(idx, cur.length), 0, x);                       // 지워진 항목을 원래 자리 근처에 복구
+          else if (k === 'schedules') {                                                 // 지워진 세부 계획 복구
+            const ids = new Set((have.subTasks || []).map(t => t.id));
+            (x.subTasks || []).forEach((t, ti) => { if (!ids.has(t.id)) { have.subTasks = have.subTasks || []; have.subTasks.splice(Math.min(ti, have.subTasks.length), 0, t); } });
+          } else if (k === 'plates' && u.plateId === key) cur[cur.indexOf(have)] = x;   // 플레이트 배치/그룹 삭제 복구
+        });
+      });
+      saveLocalStorage(); renderAll();
+      if (typeof renderPlateDesigner === 'function') { try { renderPlateDesigner(); } catch (e) {} }
+      document.querySelectorAll('[data-undo-toast]').forEach(e => e.remove());
+      showToast('되돌렸어요', '삭제했던 내용을 복구했어요.');
+      return true;
+    }
+    function showUndoToast(label, onUndo) {
+      const wrap = document.getElementById('toastContainer');
+      wrap.querySelectorAll('[data-undo-toast]').forEach(e => e.remove());
+      const el = document.createElement('div');
+      el.dataset.undoToast = '1';
+      el.className = 'bg-slate-800 text-white rounded-xl shadow-2xl px-4 py-3 w-full max-w-xs md:w-72 text-xs flex items-center justify-between gap-3';
+      el.innerHTML = `<span class="font-semibold">${escapeHtml(label)}</span><button type="button" style="font-family:inherit" class="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 font-bold flex-shrink-0">되돌리기</button>`;
+      el.querySelector('button').onclick = () => { el.remove(); (onUndo || undoLast)(); };
+      wrap.appendChild(el);
+      setTimeout(() => el.remove(), 10000);
+    }
+    // Ctrl+Z (Mac은 Cmd+Z): 글자를 입력 중이 아닐 때 마지막 삭제 되돌리기
+    document.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'z') return;
+      const t = e.target, typing = t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable;
+      if (typing || !undoStack.length || document.getElementById('uiDialogModal')) return;
+      e.preventDefault(); undoLast();
+    });
+
     function showToast(title, body) {
       const wrap = document.getElementById('toastContainer');
       const el = document.createElement('div');
@@ -4470,10 +4896,10 @@
       try { localStorage.setItem(BACKUP_META_KEY, JSON.stringify(meta)); } catch (e) { /* 저장 실패 시 안내만 건너뜀 */ }
     }
     function currentBackupData() {
-      return { schedules: state.schedules, protocols: state.protocols, categories: state.categories, plates: state.plates };
+      return { schedules: state.schedules, protocols: state.protocols, categories: state.categories, plates: state.plates, cells: state.cells };
     }
     function backupCountsText(d) {
-      return `일정 ${d.schedules.length} · 프로토콜 ${d.protocols.length} · 카테고리 ${d.categories.length} · 플레이트 ${d.plates.length}`;
+      return `일정 ${d.schedules.length} · 프로토콜 ${d.protocols.length} · 카테고리 ${d.categories.length} · 플레이트 ${d.plates.length}${d.cells ? ` · 세포주 ${d.cells.length}` : ''}`;
     }
     function buildBackupJson() {
       return JSON.stringify({ app: BACKUP_APP_ID, format: BACKUP_FORMAT, exportedAt: new Date().toISOString(), data: currentBackupData() }, null, 2);
@@ -4554,6 +4980,15 @@
       if (!p || typeof p !== 'object' || !isSafeId(p.id)) return null;
       return { ...p };
     }
+    function sanitizeCell(c) {
+      if (!c || typeof c !== 'object' || !isSafeId(c.id) || typeof c.name !== 'string' || !c.name.trim() || c.name.length > 60) return null;
+      if (!isInt(c.passage, 0, 999) || !isInt(c.interval, 1, 365) || !BACKUP_DATE_RE.test(c.lastDate)) return null;
+      return {
+        id: c.id, name: c.name, passage: c.passage, lastDate: c.lastDate, interval: c.interval,
+        ratio: typeof c.ratio === 'string' ? c.ratio.slice(0, 30) : '', notes: typeof c.notes === 'string' ? c.notes.slice(0, 500) : '',
+        history: (Array.isArray(c.history) ? c.history : []).filter(h => h && BACKUP_DATE_RE.test(h.date) && isInt(h.passage, 0, 999)).slice(-30).map(h => ({ date: h.date, passage: h.passage }))
+      };
+    }
     function cleanList(list, fn, keyOf) {
       const items = [], seen = new Set();
       let skipped = 0;
@@ -4578,11 +5013,12 @@
       const pr = cleanList(obj.data.protocols, sanitizeProtocol, x => x.id);
       const ca = cleanList(obj.data.categories, sanitizeCategory, x => x.name);
       const pl = cleanList(obj.data.plates, sanitizePlate, x => x.id);
-      const data = { schedules: sc.items, protocols: pr.items, categories: ca.items, plates: pl.items };
-      if (!data.schedules.length && !data.protocols.length && !data.categories.length && !data.plates.length) {
+      const ce = cleanList(obj.data.cells, sanitizeCell, x => x.id);
+      const data = { schedules: sc.items, protocols: pr.items, categories: ca.items, plates: pl.items, ...(Array.isArray(obj.data.cells) ? { cells: ce.items } : {}) };
+      if (!data.schedules.length && !data.protocols.length && !data.categories.length && !data.plates.length && !(data.cells && data.cells.length)) {
         return { error: '백업 파일에 불러올 데이터가 없어요.' };
       }
-      return { data, skipped: sc.skipped + pr.skipped + ca.skipped + pl.skipped, exportedAt: obj.exportedAt };
+      return { data, skipped: sc.skipped + pr.skipped + ca.skipped + pl.skipped + ce.skipped, exportedAt: obj.exportedAt };
     }
 
     // ----- 불러오기: 화면 -----
@@ -4684,17 +5120,20 @@
       let summary;
       if (mode === 'replace') {
         state.schedules = d.schedules; state.protocols = d.protocols; state.categories = d.categories; state.plates = d.plates;
+        if (d.cells) state.cells = d.cells;
         summary = `덮어쓰기 완료 — ${backupCountsText(d)}`;
       } else {
         const rs = mergeList(state.schedules, d.schedules, x => x.id, remakeId);
         const rp = mergeList(state.protocols, d.protocols, x => x.id, remakeId);
         const rc = mergeList(state.categories, d.categories, x => x.name, null);
         const rl = mergeList(state.plates, d.plates, x => x.id, remakeId);
-        const same = rs.same + rp.same + rc.same + rl.same, copied = rs.copied + rp.copied + rl.copied;
-        summary = `합치기 완료 — 새로 추가: 일정 ${rs.added + rs.copied} · 프로토콜 ${rp.added + rp.copied} · 카테고리 ${rc.added} · 플레이트 ${rl.added + rl.copied}`
+        const rce = d.cells ? mergeList(state.cells, d.cells, x => x.id, remakeId) : { added: 0, same: 0, copied: 0 };
+        const same = rs.same + rp.same + rc.same + rl.same + rce.same, copied = rs.copied + rp.copied + rl.copied + rce.copied;
+        summary = `합치기 완료 — 새로 추가: 일정 ${rs.added + rs.copied} · 프로토콜 ${rp.added + rp.copied} · 카테고리 ${rc.added} · 플레이트 ${rl.added + rl.copied}${d.cells ? ` · 세포주 ${rce.added + rce.copied}` : ''}`
           + `\n(이미 있어서 건너뜀 ${same}개${copied ? `, 같은 id인데 내용이 달라 복사본으로 추가 ${copied}개` : ''})`;
       }
       ensureProtocolCategories();
+      rebuildCellSchedules();
       saveLocalStorage();
       pendingBackup = null;
       document.getElementById('backupPreview').classList.add('hidden');
@@ -4712,6 +5151,7 @@
       state.protocols = Array.isArray(d.protocols) ? d.protocols : [];
       state.categories = Array.isArray(d.categories) ? d.categories : [];
       state.plates = Array.isArray(d.plates) ? d.plates : [];
+      if (Array.isArray(d.cells)) state.cells = d.cells;
       saveLocalStorage();
       try { localStorage.removeItem(BACKUP_SNAPSHOT_KEY); } catch (e) { /* 무시 */ }
       renderAll();
@@ -4749,7 +5189,7 @@
       const modalText = document.getElementById('backupLastText');
       if (modalText) modalText.textContent = text;
 
-      const hasData = state.schedules.length + state.protocols.length + state.plates.length > 0;
+      const hasData = state.schedules.length + state.protocols.length + state.plates.length + state.cells.length > 0;
       const banner = document.getElementById('homeBackupBanner');
       if (banner) {
         const show = hasData && stale && !(meta.snoozeUntil && meta.snoozeUntil > Date.now());
@@ -4913,9 +5353,9 @@
   const SUPABASE_URL = 'https://qclhiunojdyspqpdbdvv.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_dHoFqPA8s2DcIdt5mbfG_g_8GvkYZUR';
   (() => {
-    const KINDS = { schedule: 'schedules', protocol: 'protocols', category: 'categories', plate: 'plates' };
-    const KIND_KO = { schedule: '일정', protocol: '프로토콜', category: '카테고리', plate: '플레이트' };
-    const LS_KEYS = ['app_unified_schedules_v6', 'app_protocols_v4', 'app_protocol_categories_v3', 'app_plate_maps_v1'];
+    const KINDS = { schedule: 'schedules', protocol: 'protocols', category: 'categories', plate: 'plates', cell: 'cells' };
+    const KIND_KO = { schedule: '일정', protocol: '프로토콜', category: '카테고리', plate: '플레이트', cell: '세포주' };
+    const LS_KEYS = ['app_unified_schedules_v6', 'app_protocols_v4', 'app_protocol_categories_v3', 'app_plate_maps_v1', 'app_cell_lines_v1'];
     const META = 'app_sync_meta_v1', LEGACY = 'app_legacy_localstorage_backup_v1';
     const $ = id => document.getElementById(id);
     const keyOf = (k, x) => k === 'category' ? x.name : x.id;
@@ -5024,11 +5464,12 @@
       if (!user || busy) return;
       if (!navigator.onLine) { setStatus(nOut() ? 'offline' : 'ok'); return; }
       busy = true; if (nOut()) setStatus('sync');
+      let blocked = 0;
       try {
         for (const key of Object.keys(meta.out)) {
           const o = meta.out[key];
           const { data: r, error } = await sb.rpc('push_item', { p_kind: o.k, p_item_id: o.id, p_data: o.data, p_deleted: o.del, p_base_version: o.bv });
-          if (error) throw error;
+          if (error) { if (error.code === '23514') { blocked++; continue; } throw error; }   // 서버에 '세포주' 종류가 아직 추가되지 않은 경우: 다른 항목 동기화는 계속
           if (r.status === 'ok') {
             meta.base[key] = { v: r.version, h: canon(o.data), del: o.del };
             if (meta.out[key] === o) delete meta.out[key]; else if (meta.out[key]) meta.out[key].bv = r.version;
@@ -5037,6 +5478,7 @@
         }
         const was = changed; finish(); if (was) diff();
         setStatus(nOut() ? 'pending' : 'ok');
+        if (blocked) { setStatus('err'); msg('세포주 데이터를 동기화하려면 Supabase에서 supabase_update_cells.sql을 한 번 실행해 주세요.', true); }
       } catch (e) {
         console.warn('sync error', e); setStatus(navigator.onLine ? 'err' : 'offline'); clearTimeout(timer); timer = setTimeout(flush, 15000);
       } finally { busy = false; }
