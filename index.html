@@ -974,7 +974,11 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">실험 제목</label>
-          <input type="text" id="protoTitleInput" autocomplete="off" data-suggest="protoTitle" required placeholder="예: Standard PCR Amplification Protocol" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+          <div class="flex gap-2">
+            <input type="hidden" id="protoIconInput" value="">
+            <button type="button" id="protoIconBtn" onclick="pickFormIcon(this)" title="아이콘(이모지) 고르기" style="font-family:inherit" class="w-11 h-[42px] flex-shrink-0 rounded-xl border border-slate-200 bg-[#f8fafc] hover:bg-slate-100 text-xl leading-none flex items-center justify-center transition"><i class="fa-regular fa-face-smile text-slate-400"></i></button>
+          <input type="text" id="protoTitleInput" autocomplete="off" data-suggest="protoTitle" required placeholder="예: Standard PCR Amplification Protocol" class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+          </div>
         </div>
 
         <div>
@@ -2708,6 +2712,93 @@
       }
     }
 
+    // ===================== 이모지 아이콘 선택 =====================
+    const EMOJI_LIST = [
+      ['🧪','시험관 실험 test tube'],['🔬','현미경 microscope'],['🧬','dna 유전자 gene'],['🧫','배양 페트리 petri dish'],['💉','주사 syringe'],['🦠','세균 바이러스 미생물 microbe'],
+      ['🧴','용액 병 bottle'],['⚗️','플라스크 증류 flask'],['🌡️','온도 thermometer'],['🩸','혈액 blood'],['💊','약 알약 pill'],['🩺','청진기'],['🧼','비누'],['🧽','스펀지'],
+      ['🧊','얼음 ice'],['🔥','불 열 fire'],['❄️','냉동 눈 freeze'],['💧','물 용액 water'],['🌱','새싹 세포 sprout'],['🍄','버섯 균'],['🐭','쥐 mouse'],['🐁','쥐'],['🐀','쥐 rat'],['🐇','토끼 rabbit'],
+      ['🐣','병아리 chick'],['🐥','병아리'],['🐤','병아리'],['🥼','가운 실험복 coat'],['🥽','보안경 goggles'],['🧤','장갑 glove'],['😷','마스크 mask'],
+      ['📈','그래프 증가 chart'],['📉','그래프 감소'],['📊','통계 stats'],['🧮','계산 abacus'],['💻','컴퓨터 분석 laptop'],['🖥️','컴퓨터 desktop'],['📝','메모 note'],['📋','클립보드 clipboard'],
+      ['📚','책 books'],['📖','책 book'],['📓','노트 notebook'],['📎','클립'],['📌','핀 pin'],['🔖','북마크'],['🏷️','태그 label'],['📅','날짜 달력 calendar'],['⏰','알람 시간 alarm'],['⏳','모래시계 시간'],['🔔','알림 bell'],
+      ['🔒','잠금 lock'],['🔑','열쇠 key'],['🔧','도구 렌치 wrench'],['⚙️','설정 gear'],['🛠️','도구'],['🔍','검색 돋보기 search'],['💡','아이디어 전구 idea'],
+      ['✅','체크 완료 check'],['⭐','별 star'],['🚩','깃발 flag'],['❗','느낌표'],['❓','물음표'],['🎯','목표 target'],['🏆','트로피 trophy'],['🎓','졸업 학위 graduation'],
+      ['🧠','뇌 brain'],['🫀','심장 heart'],['🫁','폐 lung'],['🦴','뼈 bone'],['👀','눈 eyes'],['✂️','자르기 가위 cloning cut'],['🧵','실 thread'],['🔗','링크 link'],['🧲','자석 magnet'],
+      ['⚡','전기 번개 전기영동 electric'],['🔌','플러그'],['🔋','배터리'],['🌀','원심분리 회전 spin'],['♻️','재활용'],['🧯','소화기'],['⚖️','저울 balance'],['📏','자 ruler'],['🔭','망원경'],
+      ['🧑‍🔬','과학자 scientist'],['👩‍🔬','과학자 여자'],['👨‍🔬','과학자 남자'],['🌿','식물 herb'],['🌸','꽃 flower'],['🍀','네잎클로버 clover'],['✨','반짝 sparkle'],['🎉','축하 party'],
+      ['❤️','하트 빨강 heart'],['🧡','주황 하트'],['💛','노랑 하트'],['💚','초록 하트'],['💙','파랑 하트'],['💜','보라 하트'],['🤍','흰 하트'],['🖤','검정 하트'],
+      ['😀','웃음 smile'],['😊','미소'],['😎','선글라스 cool'],['🤓','공부 nerd'],['🤔','생각 think'],['😴','졸림 sleep'],['🥳','파티 축하'],['😅','땀 웃음'],['🙏','부탁 감사 pray'],['👍','좋아요 thumbs up'],['👏','박수'],['💪','힘 근육'],['✍️','쓰기 write'],
+      ['🌈','무지개'],['☀️','해 맑음 sun'],['🌙','달 moon'],['⛅','구름'],['🌧️','비 rain'],['🍎','사과'],['☕','커피 coffee'],['🍺','맥주'],['🎧','음악 헤드폰'],['🏃','달리기']
+    ];
+    function closeEmojiPicker() {
+      const old = document.getElementById('emojiPicker');
+      if (old) old.remove();
+      document.removeEventListener('mousedown', emojiOutside, true);
+      document.removeEventListener('keydown', emojiKeys, true);
+    }
+    function emojiOutside(e) { const b = document.getElementById('emojiPicker'); if (b && !b.contains(e.target)) closeEmojiPicker(); }
+    function emojiKeys(e) {
+      const b = document.getElementById('emojiPicker');
+      if (!b) return;
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeEmojiPicker(); }
+    }
+    function firstGrapheme(str) {
+      str = String(str || '').trim();
+      if (!str) return '';
+      if (window.Intl && Intl.Segmenter) { const it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(str)[Symbol.iterator]().next(); return it.done ? '' : it.value.segment; }
+      return Array.from(str)[0];
+    }
+    // anchor 근처에 이모지 선택 창을 열고, 고르면 onPick(이모지)을 호출 ('' = 아이콘 제거)
+    function openEmojiPicker(anchor, current, onPick) {
+      closeEmojiPicker();
+      const box = document.createElement('div');
+      box.id = 'emojiPicker';
+      box.className = 'bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 space-y-2';
+      box.style.cssText = 'position:fixed;z-index:85;width:300px;max-width:calc(100vw - 16px);';
+      box.innerHTML = `
+        <div class="flex gap-2">
+          <input type="text" autocomplete="off" data-ep="q" placeholder="검색 (예: 현미경, dna)" class="flex-1 min-w-0 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+          <button type="button" data-ep="clear" style="font-family:inherit" class="px-2.5 py-1.5 text-[11px] font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex-shrink-0">제거</button>
+        </div>
+        <div data-ep="grid" class="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto"></div>
+        <div class="border-t border-slate-100 pt-2">
+          <input type="text" autocomplete="off" data-ep="own" placeholder="직접 입력 (이모지를 붙여넣고 Enter)" class="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+        </div>`;
+      document.body.appendChild(box);
+      const grid = box.querySelector('[data-ep=grid]'), q = box.querySelector('[data-ep=q]'), own = box.querySelector('[data-ep=own]');
+      const pick = v => { closeEmojiPicker(); onPick(v); };
+      const paint = () => {
+        const k = q.value.trim().toLowerCase();
+        const list = EMOJI_LIST.filter(([, kw]) => !k || kw.toLowerCase().includes(k));
+        grid.innerHTML = list.length ? list.map(([e]) => `<button type="button" data-e="${e}" style="font-family:inherit" class="h-8 rounded-lg text-lg leading-none hover:bg-slate-100 transition ${e === current ? 'bg-slate-200' : ''}">${e}</button>`).join('') : '<p class="col-span-8 text-center text-[11px] text-slate-400 py-4">검색 결과가 없어요. 아래에 직접 입력해 보세요.</p>';
+      };
+      paint();
+      q.addEventListener('input', paint);
+      q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); const b = grid.querySelector('[data-e]'); if (b) pick(b.dataset.e); } });
+      own.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' || e.isComposing) return;
+        e.preventDefault();
+        const g = firstGrapheme(own.value);
+        if (g && /[\p{Extended_Pictographic}\p{Regional_Indicator}]/u.test(g)) pick(g); else own.classList.add('border-red-300');
+      });
+      grid.addEventListener('click', e => { const b = e.target.closest('[data-e]'); if (b) pick(b.dataset.e); });
+      box.querySelector('[data-ep=clear]').addEventListener('click', () => pick(''));
+      const r = anchor.getBoundingClientRect(), w = 300, h = box.offsetHeight || 300;
+      box.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+      box.style.top = (r.bottom + 6 + h > window.innerHeight && r.top - h - 6 > 8 ? r.top - h - 6 : r.bottom + 6) + 'px';
+      document.addEventListener('keydown', emojiKeys, true);
+      setTimeout(() => { document.addEventListener('mousedown', emojiOutside, true); q.focus(); }, 0);   // 열 때의 클릭에 바로 닫히지 않게 바깥 클릭 감지는 살짝 늦게
+    }
+    function setFormIcon(v) {
+      document.getElementById('protoIconInput').value = v || '';
+      document.getElementById('protoIconBtn').innerHTML = v ? escapeHtml(v) : '<i class="fa-regular fa-face-smile text-slate-400"></i>';
+    }
+    function pickFormIcon(btn) { openEmojiPicker(btn, document.getElementById('protoIconInput').value, setFormIcon); }
+    function pickProtocolIcon(id, anchor) {
+      const p = state.protocols.find(x => x.id === id);
+      if (!p) return;
+      openEmojiPicker(anchor, p.icon || '', v => { if (v) p.icon = v; else delete p.icon; saveLocalStorage(); renderAll(); });
+    }
+
     // ===================== 프로토콜 보드 (Notion 보드 형태) =====================
     // 보드(큰 카테고리: 예 석사 / GBCC) 안에 카테고리 열(작은 카테고리: CELL WORK …)이 있고, 열마다 프로토콜 카드가 쌓여요.
     const DEFAULT_BOARD = '기본 프로토콜';
@@ -2736,6 +2827,7 @@
           <div data-col-id="${escapeHtml(key)}" class="space-y-2 min-h-[6px]">
             ${cards.map(p => `<div data-proto-id="${p.id}" onclick="openProtocolDetailModal('${p.id}')" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2.5 shadow-2xs text-xs font-semibold text-slate-800 flex items-start gap-1.5 cursor-pointer hover:shadow-md transition">
               <span onpointerdown="startReorder(event, this, 'proto')" onclick="event.stopPropagation()" title="끌어서 순서·카테고리 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:12px;min-height:18px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-[10px]"></i></span>
+              <span onclick="event.stopPropagation(); pickProtocolIcon('${p.id}', this)" title="아이콘 바꾸기" style="min-width:16px;min-height:18px;display:inline-flex;align-items:center;justify-content:center" class="flex-shrink-0 text-sm leading-snug cursor-pointer select-none hover:opacity-70 transition">${p.icon ? escapeHtml(p.icon) : '<i class="fa-regular fa-face-smile text-slate-300 text-xs"></i>'}</span>
               <span class="break-words min-w-0 flex-1 leading-snug">${escapeHtml(p.title)}</span>
             </div>`).join('')}
           </div>
@@ -2849,6 +2941,7 @@
 
       document.getElementById('protocolForm').reset();
       document.getElementById('protoEditId').value = editId || '';
+      setFormIcon('');
       document.getElementById('protoReagentsContainer').innerHTML = '';
 
       if (editId) {
@@ -2856,6 +2949,7 @@
         if (proto) {
           document.getElementById('protocolModalTitle').innerHTML = '<span>🔬</span> 실험 Protocol 수정';
           document.getElementById('protoTitleInput').value = proto.title;
+          setFormIcon(proto.icon || '');
           document.getElementById('protoNotesInput').value = proto.notes;
           document.getElementById('protoStepsInput').value = proto.steps;
           (proto.reagents || []).forEach(r => addReagentRow(r));
@@ -2888,7 +2982,7 @@
       if (!proto) return;
 
       document.getElementById('activeProtocolDetailId').value = id;
-      document.getElementById('detailProtoTitle').innerText = proto.title;
+      document.getElementById('detailProtoTitle').innerText = (proto.icon ? proto.icon + ' ' : '') + proto.title;
       document.getElementById('detailProtoNotes').innerText = proto.notes;
       document.getElementById('detailProtoSteps').innerText = proto.steps;
 
@@ -2930,6 +3024,7 @@
       const notes = document.getElementById('protoNotesInput').value.trim();
       const steps = document.getElementById('protoStepsInput').value.trim();
       const reagents = collectReagentRows();
+      const icon = document.getElementById('protoIconInput').value;
 
       if (!title) return;
       if (!category || !catByKey(category)) { uiAlert('먼저 카테고리를 만들어 주세요. (프로토콜 화면의 "+ 새 카테고리")'); return; }
@@ -2939,12 +3034,13 @@
         if (idx !== -1) {
           const movedCat = state.protocols[idx].category !== category;
           state.protocols[idx] = { ...state.protocols[idx], category, title, notes, steps, reagents };
+          if (icon) state.protocols[idx].icon = icon; else delete state.protocols[idx].icon;
           if (movedCat) delete state.protocols[idx].ord;          // 다른 카테고리로 옮기면 맨 아래에 놓임
         }
       } else {
         state.protocols.push({
           id: 'proto_' + Date.now(),
-          category, title, notes, steps, reagents
+          category, title, notes, steps, reagents, ...(icon ? { icon } : {})
         });
       }
 
@@ -3619,8 +3715,8 @@
         const cat = catByKey(p.category);
         html += `
           <button onclick="openSearchProtocol('${p.id}')" class="w-full text-left px-3 py-2 hover:bg-slate-100 transition flex items-center gap-2">
-            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border border-black/10 flex-shrink-0" style="background-color: ${cat ? cat.color : '#f1f5f9'}">${escapeHtml(p.category)}</span>
-            <span class="truncate font-semibold text-slate-700">${escapeHtml(p.title)}</span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border border-black/10 flex-shrink-0" style="background-color: ${cat ? cat.color : '#f1f5f9'}">${escapeHtml(catName(p.category))}</span>
+            <span class="truncate font-semibold text-slate-700">${p.icon ? escapeHtml(p.icon) + ' ' : ''}${escapeHtml(p.title)}</span>
           </button>`;
       });
 
@@ -4482,7 +4578,7 @@
         const p = state.protocols.find(x => x.id === id);
         if (!p) return;
         const steps = (p.steps || '').split('\n').map(l => l.trim()).filter(Boolean);
-        body += `<div class="block"><h2>🔬 ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
+        body += `<div class="block"><h2>${escapeHtml(p.icon || '🔬')} ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
           ${p.notes ? `<div class="note">⚠ ${escapeHtml(p.notes)}</div>` : ''}
           ${steps.map(l => `<div class="step"><span class="box"></span>${escapeHtml(l)}</div>`).join('')}
           ${p.reagents && p.reagents.length ? `<table><tr><th>시약</th><th style="width:28mm">1개당</th><th style="width:34mm">× ___ 개 (총량)</th></tr>
@@ -5095,7 +5191,9 @@
     }
     function sanitizeProtocol(p) {
       if (!p || typeof p !== 'object' || !isSafeId(p.id) || typeof p.title !== 'string') return null;
-      return { ...p, category: (typeof p.category === 'string' && p.category.trim()) ? p.category : 'General' };
+      const q = { ...p, category: (typeof p.category === 'string' && p.category.trim()) ? p.category : 'General' };
+      if (!(typeof q.icon === 'string' && q.icon.length <= 16)) delete q.icon;
+      return q;
     }
     function sanitizeCategory(c) {
       if (!c || typeof c !== 'object' || typeof c.name !== 'string' || !c.name.trim() || c.name.length > 60) return null;
