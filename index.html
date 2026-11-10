@@ -454,21 +454,13 @@
           </button>
         </div>
 
-        <!-- 카테고리 관리 태그 바 -->
-        <div class="bg-[#f8fafc] p-4 rounded-xl border border-slate-200 space-y-3">
-          <div class="flex flex-wrap justify-between items-center gap-2">
-            <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <i class="fa-solid fa-tags text-slate-500"></i> 등록된 카테고리 관리
-            </h4>
-            <button onclick="openCategoryManageModal()" class="text-xs bg-white hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 border border-slate-200 shadow-2xs">
-              <i class="fa-solid fa-gear"></i> 카테고리 추가/삭제
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2" id="categoryFilterTagsContainer"></div>
+        <!-- 프로토콜 보드: 보드(큰 카테고리) > 카테고리 열(작은 카테고리) > 프로토콜 카드 -->
+        <div class="flex justify-end items-center gap-2">
+          <button onclick="openBoardModal()" class="text-xs bg-white hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 border border-slate-200 shadow-2xs">
+            <i class="fa-solid fa-plus"></i> 새 보드
+          </button>
         </div>
-
-        <!-- 프로토콜 카드 그리드 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="protocolListContainer"></div>
+        <div id="protocolBoardsContainer" class="space-y-8"></div>
       </div>
     </section>
 
@@ -976,12 +968,8 @@
         <input type="hidden" id="protoEditId" value="">
 
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">실험 카테고리 선택 또는 입력</label>
-          <div class="flex gap-2">
-            <select id="protoCategorySelect" onchange="onProtocolCategorySelectChange(this.value)" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none">
-            </select>
-          </div>
-          <input type="text" id="protoCatInput" autocomplete="off" data-suggest="protoCat" required placeholder="예: Bio / PCR" class="mt-2 w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400">
+          <label class="block text-xs font-bold text-slate-600 mb-1">카테고리 <span class="font-normal text-slate-400">(보드 › 카테고리)</span></label>
+          <select id="protoCategorySelect" required class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300"></select>
         </div>
 
         <div>
@@ -1320,6 +1308,55 @@
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
         <button type="button" id="cellDeleteBtn" onclick="deleteCellFromModal()" class="hidden mr-auto px-3 py-2 text-xs font-semibold rounded-xl bg-white text-red-500 border border-red-200 hover:bg-red-50 transition">삭제</button>
         <button type="button" onclick="closeCellModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
+        <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition">저장</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="categoryEditModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <form onsubmit="handleSaveCategoryEdit(event)" class="bg-white rounded-2xl max-w-sm w-full p-4 md:p-6 shadow-2xl space-y-3">
+      <input type="hidden" id="catEditKey">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 id="catEditTitle" class="text-base font-bold text-slate-800">새 카테고리</h3>
+        <button type="button" onclick="closeCategoryEditModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">이름</label>
+        <input id="catEditName" type="text" autocomplete="off" required placeholder="예) CELL WORK" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+      </div>
+      <div class="grid grid-cols-[1fr_auto] gap-3 items-end">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">보드</label>
+          <select id="catEditBoard" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">색상</label>
+          <input id="catEditColor" type="color" value="#bae1ff" class="w-12 h-[42px] rounded-xl border border-slate-200 cursor-pointer bg-white p-1">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+        <button type="button" id="catEditDeleteBtn" onclick="deleteCategoryFromModal()" class="hidden mr-auto px-3 py-2 text-xs font-semibold rounded-xl bg-white text-red-500 border border-red-200 hover:bg-red-50 transition">삭제</button>
+        <button type="button" onclick="closeCategoryEditModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
+        <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition">저장</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="boardModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <form onsubmit="handleSaveBoard(event)" class="bg-white rounded-2xl max-w-sm w-full p-4 md:p-6 shadow-2xl space-y-3">
+      <input type="hidden" id="boardEditOrig">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 id="boardEditTitle" class="text-base font-bold text-slate-800">새 보드</h3>
+        <button type="button" onclick="closeBoardModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">보드 이름</label>
+        <input id="boardEditName" type="text" autocomplete="off" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300">
+      </div>
+      <p id="boardEditHint" class="text-[11px] text-slate-400">새 보드는 "ETC" 카테고리 하나로 시작해요. 카테고리는 보드 안의 "+ 새 카테고리"로 더 만들 수 있어요.</p>
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+        <button type="button" id="boardDeleteBtn" onclick="deleteBoardFromModal()" class="hidden mr-auto px-3 py-2 text-xs font-semibold rounded-xl bg-white text-red-500 border border-red-200 hover:bg-red-50 transition">보드 삭제</button>
+        <button type="button" onclick="closeBoardModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
         <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition">저장</button>
       </div>
     </form>
@@ -2507,7 +2544,7 @@
     //  - 'card': Weekly To Do List 카드 (다른 날/오전·오후로 옮기기는 카드 자체를 끌기)
     //  - 'sub' : 카드 안의 세부 계획,  'row': 일정 등록·수정 창의 세부 항목 입력칸
     let reorder = null;
-    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row', print: '.print-plan-row' };
+    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row', print: '.print-plan-row', proto: '[data-proto-id]' };
     function startReorder(e, handle, kind = 'card') {
       if (e.button !== undefined && e.button !== 0) return;
       const sel = REORDER_SEL[kind], item = handle.closest(sel);
@@ -2527,6 +2564,19 @@
       e.preventDefault();
       const { item, list, sel } = reorder;
       const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (reorder.kind === 'proto') {                                            // 프로토콜 카드: 다른 카테고리 열로도 이동 가능
+        if (!el) return;
+        const tgt = el.closest('[data-proto-id]');
+        if (tgt && tgt !== item) {
+          const r = tgt.getBoundingClientRect();
+          if (tgt.parentElement === item.parentElement) tgt.parentElement.insertBefore(item, (item.compareDocumentPosition(tgt) & Node.DOCUMENT_POSITION_FOLLOWING) ? tgt.nextSibling : tgt);
+          else tgt.parentElement.insertBefore(item, e.clientY > r.top + r.height / 2 ? tgt.nextSibling : tgt);
+        } else if (!tgt) {                                                       // 열의 빈 곳/머리말 위로 가져가면 맨 아래에 놓임
+          const box = el.closest('[data-col-box]'), col = box && box.querySelector('[data-col-id]');
+          if (col && !col.contains(item)) col.appendChild(item);
+        }
+        return;
+      }
       const target = el && el.closest(sel);
       if (!target || target === item || target.parentElement !== list) return;
       const after = item.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING;   // 내 아래에 있는 항목이면 그 뒤로
@@ -2541,6 +2591,15 @@
       if (host) host.draggable = true;
       item.style.opacity = ''; item.style.outline = '';
       const now = [...list.children];
+      if (kind === 'proto') {                                           // 프로토콜: 바뀐 열(들)의 순서와 카테고리를 저장
+        const dest = item.parentElement;
+        if (dest === list && now.every((c, i) => c === before[i])) return;
+        [...new Set([list, dest])].forEach(l => [...l.children].filter(c => c.dataset.protoId).forEach((c, i) => {
+          const p = state.protocols.find(x => x.id === c.dataset.protoId);
+          if (p) { p.ord = i; p.category = l.dataset.colId; }
+        }));
+        saveLocalStorage(); renderAll(); return;
+      }
       if (now.every((c, i) => c === before[i])) return;                 // 순서가 안 바뀌었으면 저장 안 함
       if (kind === 'row' || kind === 'print') return;                   // 등록 창·인쇄 창: 저장할 때 / 인쇄할 때 화면 순서대로 반영됨
       if (kind === 'card') {
@@ -2649,76 +2708,144 @@
       }
     }
 
-    // 실험 Protocol 및 카테고리 관리 기능 구현 (클릭 시 상세보기, 수정, 삭제)
-    function renderCategoryFilterTags() {
-      const container = document.getElementById('categoryFilterTagsContainer');
-      container.innerHTML = '';
+    // ===================== 프로토콜 보드 (Notion 보드 형태) =====================
+    // 보드(큰 카테고리: 예 석사 / GBCC) 안에 카테고리 열(작은 카테고리: CELL WORK …)이 있고, 열마다 프로토콜 카드가 쌓여요.
+    const DEFAULT_BOARD = '기본 프로토콜';
+    const catKey = c => c.id || c.name;                 // 예전 카테고리는 이름이 곧 키 (그대로 호환)
+    const boardOf = c => c.board || DEFAULT_BOARD;
+    const catByKey = k => state.categories.find(c => catKey(c) === k);
+    const catName = k => { const c = catByKey(k); return c ? c.name : k; };
+    const getBoards = () => [...new Set(state.categories.map(boardOf))];
+    const tint = hex => /^#[0-9a-fA-F]{6}$/.test(hex) ? hex + '33' : '#f1f5f9';
+    const newCatId = () => 'cat_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
-      const allBtn = document.createElement('button');
-      allBtn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition border ${state.selectedCategoryFilter === 'ALL' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'}`;
-      allBtn.innerHTML = `<i class="fa-solid fa-border-all mr-1"></i> 전체 (${state.protocols.length})`;
-      allBtn.onclick = () => { state.selectedCategoryFilter = 'ALL'; renderAll(); };
-      container.appendChild(allBtn);
+    function renderCategoryFilterTags() { /* 보드 화면으로 대체됨 */ }
 
-      state.categories.forEach(cat => {
-        const count = state.protocols.filter(p => p.category === cat.name).length;
-        const isSelected = state.selectedCategoryFilter === cat.name;
-        const btn = document.createElement('button');
-        btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition border flex items-center gap-1.5 ${isSelected ? 'ring-2 ring-slate-800 shadow-2xs' : 'hover:opacity-80 shadow-2xs'}`;
-        btn.style.backgroundColor = cat.color;
-        btn.style.borderColor = isSelected ? '#1e293b' : 'rgba(0,0,0,0.15)';
-        btn.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-800"></span> ${escapeHtml(cat.name)} (${count})`;
-        btn.onclick = () => { state.selectedCategoryFilter = cat.name; renderAll(); };
-        container.appendChild(btn);
-      });
+    function protocolColumnHtml(cat) {
+      const key = catKey(cat);
+      const cards = state.protocols.filter(p => p.category === key).sort((a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9));
+      return `
+        <div data-col-box class="w-[260px] flex-shrink-0 rounded-2xl p-2.5" style="background-color: ${tint(cat.color)}">
+          <div class="flex items-center justify-between px-1 mb-2">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="px-2 py-0.5 rounded-md text-[11px] font-bold truncate border border-black/10" style="background-color: ${escapeHtml(cat.color)}">${escapeHtml(cat.name)}</span>
+              <span class="text-[11px] text-slate-500">${cards.length}</span>
+            </div>
+            <button data-cat="${escapeHtml(key)}" onclick="openCategoryEditModal(this.dataset.cat)" title="카테고리 수정·삭제" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-white/60 transition"><i class="fa-solid fa-ellipsis"></i></button>
+          </div>
+          <div data-col-id="${escapeHtml(key)}" class="space-y-2 min-h-[6px]">
+            ${cards.map(p => `<div data-proto-id="${p.id}" onclick="openProtocolDetailModal('${p.id}')" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2.5 shadow-2xs text-xs font-semibold text-slate-800 flex items-start gap-1.5 cursor-pointer hover:shadow-md transition">
+              <span onpointerdown="startReorder(event, this, 'proto')" onclick="event.stopPropagation()" title="끌어서 순서·카테고리 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:12px;min-height:18px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-[10px]"></i></span>
+              <span class="break-words min-w-0 flex-1 leading-snug">${escapeHtml(p.title)}</span>
+            </div>`).join('')}
+          </div>
+          <button data-cat="${escapeHtml(key)}" onclick="openProtocolModal(null, this.dataset.cat)" class="mt-2 w-full text-left text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-white/70 rounded-lg px-2.5 py-2 transition">+ 새 페이지</button>
+        </div>`;
     }
 
     function renderProtocolList() {
-      const container = document.getElementById('protocolListContainer');
-      container.innerHTML = '';
-
-      let filtered = state.protocols;
-      if (state.selectedCategoryFilter !== 'ALL') {
-        filtered = state.protocols.filter(p => p.category === state.selectedCategoryFilter);
-      }
-
-      if (filtered.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 col-span-3 text-center py-8">등록된 실험 프로토콜이 없습니다.</p>`;
+      const root = document.getElementById('protocolBoardsContainer');
+      if (!root) return;
+      root.innerHTML = '';
+      const boards = getBoards();
+      if (!boards.length) {
+        root.innerHTML = '<div class="text-center text-xs text-slate-400 py-10 border border-dashed border-slate-300 rounded-2xl">보드가 없어요. 오른쪽 위 "새 보드"로 시작해 보세요. (예: 석사 프로토콜, GBCC 프로토콜)</div>';
         return;
       }
-
-      filtered.forEach(proto => {
-        const catObj = state.categories.find(c => c.name === proto.category);
-        const catBg = catObj ? catObj.color : '#f1f5f9';
-
-        const card = document.createElement('div');
-        card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2.5 cursor-pointer hover:shadow-md transition';
-        card.onclick = () => openProtocolDetailModal(proto.id);
-
-        card.innerHTML = `
-          <div class="flex justify-between items-center">
-            <span class="text-[10px] font-bold px-2.5 py-1 rounded-md border border-slate-200" style="background-color: ${escapeHtml(catBg)}">${escapeHtml(proto.category)}</span>
-            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
-              <button onclick="openProtocolModal('${proto.id}')" class="text-slate-400 hover:text-slate-700 text-xs" title="수정"><i class="fa-solid fa-pen"></i></button>
-              <button onclick="deleteProtocol('${proto.id}')" class="text-slate-300 hover:text-red-500 text-xs" title="삭제"><i class="fa-solid fa-trash"></i></button>
-            </div>
+      boards.forEach(board => {
+        const cats = state.categories.filter(c => boardOf(c) === board);
+        const total = state.protocols.filter(p => cats.some(c => catKey(c) === p.category)).length;
+        const sec = document.createElement('div');
+        sec.className = 'space-y-3';
+        sec.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="text-base font-black text-slate-800 tracking-tight min-w-0 break-words">${escapeHtml(board)} <span class="text-xs font-semibold text-slate-400 ml-1">${total}</span></h4>
+            <button data-board="${escapeHtml(board)}" onclick="openBoardModal(this.dataset.board)" title="보드 이름 변경·삭제" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"><i class="fa-solid fa-pen text-xs"></i></button>
           </div>
-          <h4 class="text-sm font-bold text-slate-800">${escapeHtml(proto.title)}</h4>
-          <div class="text-xs text-slate-600 bg-[#f8fafc] p-2.5 rounded-lg border border-slate-200 space-y-1">
-            <p class="font-semibold text-slate-700 truncate"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> 주의: ${escapeHtml(proto.notes)}</p>
-          </div>
-        `;
-        container.appendChild(card);
+          <div class="flex gap-3 overflow-x-auto pb-3 items-start">
+            ${cats.map(protocolColumnHtml).join('')}
+            <button data-board="${escapeHtml(board)}" onclick="openCategoryEditModal(null, this.dataset.board)" class="flex-shrink-0 w-[200px] text-left text-xs font-semibold text-slate-400 hover:text-slate-700 border border-dashed border-slate-300 hover:bg-slate-50 rounded-2xl px-3 py-3 transition">+ 새 카테고리</button>
+          </div>`;
+        root.appendChild(sec);
       });
     }
 
-    function openProtocolModal(editId = null) {
+    // ── 카테고리(열) 만들기·수정·삭제 ──
+    function openCategoryEditModal(key, presetBoard) {
+      const c = key ? catByKey(key) : null;
+      document.getElementById('catEditKey').value = c ? catKey(c) : '';
+      document.getElementById('catEditTitle').textContent = c ? '카테고리 수정' : '새 카테고리';
+      document.getElementById('catEditName').value = c ? c.name : '';
+      document.getElementById('catEditColor').value = c && /^#[0-9a-fA-F]{6}$/.test(c.color) ? c.color : '#bae1ff';
+      const sel = document.getElementById('catEditBoard'), cur = c ? boardOf(c) : (presetBoard || getBoards()[0] || DEFAULT_BOARD);
+      sel.innerHTML = [...new Set([...getBoards(), cur])].map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+      sel.value = cur;
+      document.getElementById('catEditDeleteBtn').classList.toggle('hidden', !c);
+      document.getElementById('categoryEditModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('catEditName').focus(), 0);
+    }
+    function closeCategoryEditModal() { document.getElementById('categoryEditModal').classList.add('hidden'); }
+    function handleSaveCategoryEdit(e) {
+      e.preventDefault();
+      const key = document.getElementById('catEditKey').value, name = document.getElementById('catEditName').value.trim();
+      const color = document.getElementById('catEditColor').value, board = document.getElementById('catEditBoard').value;
+      if (!name) return;
+      if (state.categories.some(x => boardOf(x) === board && x.name === name && catKey(x) !== key)) { uiAlert('같은 보드에 이미 있는 카테고리 이름이에요.'); return; }
+      if (key) {
+        const c = catByKey(key);
+        if (!c) return;
+        if (!c.id) c.id = c.name;              // 예전 카테고리는 이름을 바꾸기 전에 고유 키를 고정 (프로토콜 연결 유지)
+        c.name = name; c.color = color; c.board = board;
+      } else state.categories.push({ id: newCatId(), name, color, board });
+      saveLocalStorage(); closeCategoryEditModal(); renderAll();
+    }
+    async function deleteCategoryFromModal() {
+      const key = document.getElementById('catEditKey').value, c = key && catByKey(key);
+      if (!c) return;
+      const n = state.protocols.filter(p => p.category === key).length;
+      if (!await uiConfirm(`'${c.name}' 카테고리를 삭제할까요?${n ? `\n안에 있는 프로토콜 ${n}개도 함께 삭제돼요.` : ''}`)) return;
+      pushUndo('카테고리를 삭제했어요');
+      state.protocols = state.protocols.filter(p => p.category !== key);
+      state.categories = state.categories.filter(x => catKey(x) !== key);
+      saveLocalStorage(); closeCategoryEditModal(); renderAll();
+    }
+
+    // ── 보드 만들기·이름 변경·삭제 ──
+    function openBoardModal(board) {
+      document.getElementById('boardEditOrig').value = board || '';
+      document.getElementById('boardEditTitle').textContent = board ? '보드 이름 변경' : '새 보드';
+      document.getElementById('boardEditName').value = board || '';
+      document.getElementById('boardEditHint').classList.toggle('hidden', !!board);
+      document.getElementById('boardDeleteBtn').classList.toggle('hidden', !board);
+      document.getElementById('boardModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('boardEditName').focus(), 0);
+    }
+    function closeBoardModal() { document.getElementById('boardModal').classList.add('hidden'); }
+    function handleSaveBoard(e) {
+      e.preventDefault();
+      const orig = document.getElementById('boardEditOrig').value, name = document.getElementById('boardEditName').value.trim().slice(0, 40);
+      if (!name) return;
+      if (getBoards().some(b => b === name && b !== orig)) { uiAlert('이미 있는 보드 이름이에요.'); return; }
+      if (orig) state.categories.forEach(c => { if (boardOf(c) === orig) c.board = name; });
+      else state.categories.push({ id: newCatId(), name: 'ETC', color: '#bae1ff', board: name });     // 새 보드는 'ETC' 열 하나로 시작
+      saveLocalStorage(); closeBoardModal(); renderAll();
+    }
+    async function deleteBoardFromModal() {
+      const orig = document.getElementById('boardEditOrig').value;
+      if (!orig) return;
+      const cats = state.categories.filter(c => boardOf(c) === orig), keys = new Set(cats.map(catKey));
+      const n = state.protocols.filter(p => keys.has(p.category)).length;
+      if (!await uiConfirm(`'${orig}' 보드를 삭제할까요?\n카테고리 ${cats.length}개와 프로토콜 ${n}개가 함께 삭제돼요.`)) return;
+      pushUndo('보드를 삭제했어요');
+      state.protocols = state.protocols.filter(p => !keys.has(p.category));
+      state.categories = state.categories.filter(c => boardOf(c) !== orig);
+      saveLocalStorage(); closeBoardModal(); renderAll();
+    }
+
+    function openProtocolModal(editId = null, presetCat = null) {
       const select = document.getElementById('protoCategorySelect');
-      select.innerHTML = '';
-      state.categories.forEach(c => {
-        select.innerHTML += `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`;
-      });
-      select.innerHTML += `<option value="ADD_NEW">+ 직접 입력하기...</option>`;
+      select.innerHTML = getBoards().map(b => `<optgroup label="${escapeHtml(b)}">${state.categories.filter(c => boardOf(c) === b).map(c => `<option value="${escapeHtml(catKey(c))}">${escapeHtml(c.name)}</option>`).join('')}</optgroup>`).join('')
+        || '<option value="">먼저 카테고리를 만들어 주세요</option>';
 
       document.getElementById('protocolForm').reset();
       document.getElementById('protoEditId').value = editId || '';
@@ -2728,18 +2855,15 @@
         const proto = state.protocols.find(p => p.id === editId);
         if (proto) {
           document.getElementById('protocolModalTitle').innerHTML = '<span>🔬</span> 실험 Protocol 수정';
-          document.getElementById('protoCatInput').value = proto.category;
           document.getElementById('protoTitleInput').value = proto.title;
           document.getElementById('protoNotesInput').value = proto.notes;
           document.getElementById('protoStepsInput').value = proto.steps;
           (proto.reagents || []).forEach(r => addReagentRow(r));
-          select.value = state.categories.some(c => c.name === proto.category) ? proto.category : 'ADD_NEW';
+          if (catByKey(proto.category)) select.value = proto.category;
         }
       } else {
         document.getElementById('protocolModalTitle').innerHTML = '<span>🔬</span> 실험 Protocol 등록';
-        if (state.categories.length > 0) {
-          document.getElementById('protoCatInput').value = state.categories[0].name;
-        }
+        if (presetCat && catByKey(presetCat)) select.value = presetCat;
       }
 
       document.getElementById('protocolModal').classList.remove('hidden');
@@ -2768,9 +2892,9 @@
       document.getElementById('detailProtoNotes').innerText = proto.notes;
       document.getElementById('detailProtoSteps').innerText = proto.steps;
 
-      const catObj = state.categories.find(c => c.name === proto.category);
+      const catObj = catByKey(proto.category);
       const badge = document.getElementById('detailProtoCatBadge');
-      badge.innerText = proto.category;
+      badge.innerText = catObj ? `${boardOf(catObj)} › ${catObj.name}` : proto.category;
       badge.style.backgroundColor = catObj ? catObj.color : '#f1f5f9';
       renderReagentCalc(proto);
 
@@ -2801,22 +2925,21 @@
     function handleSaveProtocol(e) {
       e.preventDefault();
       const editId = document.getElementById('protoEditId').value;
-      const category = document.getElementById('protoCatInput').value.trim();
+      const category = document.getElementById('protoCategorySelect').value;
       const title = document.getElementById('protoTitleInput').value.trim();
       const notes = document.getElementById('protoNotesInput').value.trim();
       const steps = document.getElementById('protoStepsInput').value.trim();
       const reagents = collectReagentRows();
 
-      if (!title || !category) return;
-
-      if (!state.categories.some(c => c.name === category)) {
-        state.categories.push({ name: category, color: '#bae1ff' });
-      }
+      if (!title) return;
+      if (!category || !catByKey(category)) { uiAlert('먼저 카테고리를 만들어 주세요. (프로토콜 화면의 "+ 새 카테고리")'); return; }
 
       if (editId) {
         const idx = state.protocols.findIndex(p => p.id === editId);
         if (idx !== -1) {
+          const movedCat = state.protocols[idx].category !== category;
           state.protocols[idx] = { ...state.protocols[idx], category, title, notes, steps, reagents };
+          if (movedCat) delete state.protocols[idx].ord;          // 다른 카테고리로 옮기면 맨 아래에 놓임
         }
       } else {
         state.protocols.push({
@@ -3083,6 +3206,8 @@
       printModal:          { close: () => closePrintModal(), ok: () => doPrintDay() },
       backupModal:         { close: () => closeBackupModal() },
       quickAddModal:       { close: () => closeQuickAddModal(), ok: () => submitQuickAdd() },
+      categoryEditModal:   { form: true, close: () => closeCategoryEditModal(), ok: () => document.querySelector('#categoryEditModal form').requestSubmit(), del: () => deleteCategoryFromModal() },
+      boardModal:          { form: true, close: () => closeBoardModal(), ok: () => document.querySelector('#boardModal form').requestSubmit(), del: () => deleteBoardFromModal() },
       cellModal:           { form: true, close: () => closeCellModal(), ok: () => document.getElementById('cellForm').requestSubmit(), del: () => deleteCellFromModal() },
       syncModal:           { close: () => closeSyncModal(), ok: () => { if (!document.getElementById('syncAuthBox').classList.contains('hidden')) syncSignIn(); } },
     };
@@ -3470,7 +3595,7 @@
         .sort((a, b) => b.startDate.localeCompare(a.startDate))
         .slice(0, 30);
       const protos = state.protocols.filter(p =>
-        [p.title, p.category, p.notes, p.steps, ...(p.reagents || []).map(r => r.name)].join(' ').toLowerCase().includes(q));
+        [p.title, catName(p.category), p.notes, p.steps, ...(p.reagents || []).map(r => r.name)].join(' ').toLowerCase().includes(q));
 
       let html = '';
       html += `<div class="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">일정 (${scheds.length})</div>`;
@@ -3491,7 +3616,7 @@
       html += `<div class="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100">프로토콜 (${protos.length})</div>`;
       if (!protos.length) html += `<p class="px-3 py-2 pb-3 text-slate-400">일치하는 프로토콜이 없어요.</p>`;
       protos.forEach(p => {
-        const cat = state.categories.find(c => c.name === p.category);
+        const cat = catByKey(p.category);
         html += `
           <button onclick="openSearchProtocol('${p.id}')" class="w-full text-left px-3 py-2 hover:bg-slate-100 transition flex items-center gap-2">
             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border border-black/10 flex-shrink-0" style="background-color: ${cat ? cat.color : '#f1f5f9'}">${escapeHtml(p.category)}</span>
@@ -4281,7 +4406,7 @@
         ? state.protocols.map(p => `
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" value="${p.id}" class="print-proto rounded">
-              <span class="truncate"><span class="text-slate-400">[${escapeHtml(p.category)}]</span> ${escapeHtml(p.title)}</span>
+              <span class="truncate"><span class="text-slate-400">[${escapeHtml(catName(p.category))}]</span> ${escapeHtml(p.title)}</span>
             </label>`).join('')
         : '<p class="text-slate-400">등록된 프로토콜이 없어요.</p>';
       const fontSel = document.getElementById('printFontSelect');
@@ -4357,7 +4482,7 @@
         const p = state.protocols.find(x => x.id === id);
         if (!p) return;
         const steps = (p.steps || '').split('\n').map(l => l.trim()).filter(Boolean);
-        body += `<div class="block"><h2>🔬 ${escapeHtml(p.title)}<span class="cat">${escapeHtml(p.category)}</span></h2>
+        body += `<div class="block"><h2>🔬 ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
           ${p.notes ? `<div class="note">⚠ ${escapeHtml(p.notes)}</div>` : ''}
           ${steps.map(l => `<div class="step"><span class="box"></span>${escapeHtml(l)}</div>`).join('')}
           ${p.reagents && p.reagents.length ? `<table><tr><th>시약</th><th style="width:28mm">1개당</th><th style="width:34mm">× ___ 개 (총량)</th></tr>
@@ -4827,7 +4952,7 @@
     function undoLast() {
       const u = undoStack.pop();
       if (!u) return false;
-      const snap = JSON.parse(u.snap), keyOf = (k, x) => k === 'categories' ? x.name : x.id;
+      const snap = JSON.parse(u.snap), keyOf = (k, x) => k === 'categories' ? (x.id || x.name) : x.id;
       ['schedules', 'protocols', 'categories', 'plates', 'cells'].forEach(k => {
         const cur = state[k], now = new Map(cur.map(x => [keyOf(k, x), x]));
         (snap[k] || []).forEach((x, idx) => {
@@ -4974,7 +5099,8 @@
     }
     function sanitizeCategory(c) {
       if (!c || typeof c !== 'object' || typeof c.name !== 'string' || !c.name.trim() || c.name.length > 60) return null;
-      return { ...c, color: BACKUP_COLOR_RE.test(c.color) ? c.color : '#bae1ff' };
+      if (c.id !== undefined && !isSafeId(c.id)) return null;
+      return { ...c, color: BACKUP_COLOR_RE.test(c.color) ? c.color : '#bae1ff', ...(typeof c.board === 'string' ? { board: c.board.slice(0, 40) } : {}) };
     }
     function sanitizePlate(p) {
       if (!p || typeof p !== 'object' || !isSafeId(p.id)) return null;
@@ -5011,7 +5137,7 @@
       }
       const sc = cleanList(obj.data.schedules, sanitizeSchedule, x => x.id);
       const pr = cleanList(obj.data.protocols, sanitizeProtocol, x => x.id);
-      const ca = cleanList(obj.data.categories, sanitizeCategory, x => x.name);
+      const ca = cleanList(obj.data.categories, sanitizeCategory, x => x.id || x.name);
       const pl = cleanList(obj.data.plates, sanitizePlate, x => x.id);
       const ce = cleanList(obj.data.cells, sanitizeCell, x => x.id);
       const data = { schedules: sc.items, protocols: pr.items, categories: ca.items, plates: pl.items, ...(Array.isArray(obj.data.cells) ? { cells: ce.items } : {}) };
@@ -5086,7 +5212,7 @@
     const remakeId = x => ({ ...x, id: x.id.slice(0, 55) + '_imp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) });
 
     function ensureProtocolCategories() {
-      const names = new Set(state.categories.map(c => c.name));
+      const names = new Set(state.categories.map(catKey));
       state.protocols.forEach(p => {
         if (!names.has(p.category)) { state.categories.push({ name: p.category, color: '#bae1ff' }); names.add(p.category); }
       });
@@ -5125,7 +5251,7 @@
       } else {
         const rs = mergeList(state.schedules, d.schedules, x => x.id, remakeId);
         const rp = mergeList(state.protocols, d.protocols, x => x.id, remakeId);
-        const rc = mergeList(state.categories, d.categories, x => x.name, null);
+        const rc = mergeList(state.categories, d.categories, x => x.id || x.name, null);
         const rl = mergeList(state.plates, d.plates, x => x.id, remakeId);
         const rce = d.cells ? mergeList(state.cells, d.cells, x => x.id, remakeId) : { added: 0, same: 0, copied: 0 };
         const same = rs.same + rp.same + rc.same + rl.same + rce.same, copied = rs.copied + rp.copied + rl.copied + rce.copied;
@@ -5358,7 +5484,7 @@
     const LS_KEYS = ['app_unified_schedules_v6', 'app_protocols_v4', 'app_protocol_categories_v3', 'app_plate_maps_v1', 'app_cell_lines_v1'];
     const META = 'app_sync_meta_v1', LEGACY = 'app_legacy_localstorage_backup_v1';
     const $ = id => document.getElementById(id);
-    const keyOf = (k, x) => k === 'category' ? x.name : x.id;
+    const keyOf = (k, x) => k === 'category' ? (x.id || x.name) : x.id;
     const canon = v => v && typeof v === 'object' ? (Array.isArray(v) ? '[' + v.map(canon) + ']' : '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])) + '}') : JSON.stringify(v);
     const origSave = saveLocalStorage;
     let sb = null, user = null, chan = null, status = 'off', busy = false, changed = false, timer = null, pendingRows = null, started = false;
