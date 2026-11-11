@@ -92,6 +92,15 @@
     }
     body.sidebar-open { overflow: hidden; }
 
+    .rte-wrap { position: relative; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+    .rte-body img { max-width: 100%; height: auto; cursor: pointer; border-radius: 6px; }
+    .rte-view img { max-width: 100%; height: auto; cursor: zoom-in; border-radius: 6px; }
+    .rte-body table, .rte-view table { margin: 6px 0; }
+    .rte-wrap:focus-within { box-shadow: 0 0 0 2px #94a3b8; }
+    .rte-body { max-height: 320px; overflow-y: auto; padding: 10px 14px; font-size: 14px; line-height: 1.6; outline: none; word-break: break-word; }
+    .rte-body:empty::before { content: attr(data-placeholder); color: #94a3b8; pointer-events: none; }
+    .rte-body ul, .rte-view ul { list-style: disc; padding-left: 1.4em; margin: 2px 0; }
+    .rte-body ol, .rte-view ol { list-style: decimal; padding-left: 1.4em; margin: 2px 0; }
     .current-time-indicator {
       position: absolute;
       left: 0;
@@ -983,14 +992,12 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">주의 및 참고사항</label>
-          <textarea id="protoNotesInput" rows="2" required placeholder="예: 컨테미네이션 주의, 시약 보관 온도 엄수" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400"></textarea>
+          <div id="protoNotesRte" class="rte-wrap" data-rte data-minh="56" data-placeholder="예: 컨테미네이션 주의, 시약 보관 온도 엄수"></div>
         </div>
 
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1">실험 절차</label>
-          <textarea id="protoStepsInput" rows="4" required placeholder="1. Template DNA 준비
-2. Master mix 혼합
-3. Thermal cycler 작동" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-400"></textarea>
+          <div id="protoStepsRte" class="rte-wrap" data-rte data-minh="110" data-placeholder="1. Template DNA 준비&#10;2. Master mix 혼합&#10;3. Thermal cycler 작동"></div>
         </div>
 
         <div class="border-t border-slate-200 pt-3">
@@ -1029,12 +1036,12 @@
       <div class="space-y-3 text-xs text-slate-700">
         <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl space-y-1">
           <p class="font-bold text-amber-900 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> 주의 및 참고사항</p>
-          <p id="detailProtoNotes" class="text-amber-800 whitespace-pre-line"></p>
+          <div id="detailProtoNotes" class="rte-view text-amber-800 break-words"></div>
         </div>
 
         <div class="bg-[#f8fafc] border border-slate-200 p-3.5 rounded-xl space-y-1">
           <p class="font-bold text-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-list-check text-slate-600"></i> 실험 절차</p>
-          <p id="detailProtoSteps" class="text-slate-600 whitespace-pre-line leading-relaxed"></p>
+          <div id="detailProtoSteps" class="rte-view text-slate-600 leading-relaxed break-words"></div>
         </div>
 
         <div id="detailReagentCalc"></div>
@@ -2712,6 +2719,425 @@
       }
     }
 
+    // ===================== 서식 편집기 (프로토콜 주의사항·실험 절차) =====================
+    // 글꼴·글씨 크기·굵게·기울임·밑줄·취소선·글자색·형광펜·목록을 지원해요.
+    // 서식이 있으면 notesHtml / stepsHtml 에 안전하게 걸러낸 HTML을 저장하고, 검색·인쇄용 일반 글자(notes / steps)도 함께 저장해요.
+    const RTE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'SPAN', 'DIV', 'P', 'BR', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'SUB', 'SUP', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TD', 'TH']);
+    const RTE_SKIP = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TITLE', 'HEAD']);
+    const RTE_COLOR = v => /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%/]+\)|[a-z]{3,20})$/i.test(v);
+    const RTE_DECO = v => /^(none|underline|line-through|underline line-through|line-through underline)$/.test(v);
+    const RTE_LEN = v => /^\d{1,4}(\.\d+)?(px|%)$/.test(v);
+    const RTE_STYLE = {
+      'color': RTE_COLOR, 'background-color': RTE_COLOR,
+      'font-size': v => /^\d{1,3}(\.\d+)?(px|pt|em|rem|%)$/.test(v) || /^(xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large)$/.test(v),
+      'font-family': v => v.length < 120 && /^[\w\s,'"\-가-힣]+$/.test(v),
+      'font-weight': v => /^(normal|bold|bolder|lighter|[1-9]00)$/.test(v),
+      'font-style': v => /^(normal|italic|oblique)$/.test(v),
+      'text-decoration': RTE_DECO, 'text-decoration-line': RTE_DECO,
+      'text-align': v => /^(left|center|right|justify)$/.test(v),
+      'border': v => /^\d(\.\d)?px (solid|dashed|dotted) (#[0-9a-f]{3,8}|[a-z]+|rgba?\([\d\s.,%/]+\))$/i.test(v),
+      'padding': v => /^\d{1,2}px( \d{1,2}px){0,3}$/.test(v),
+      'border-collapse': v => /^(collapse|separate)$/.test(v),
+      'width': RTE_LEN, 'max-width': RTE_LEN,
+      'vertical-align': v => /^(top|middle|bottom|baseline)$/.test(v),
+    };
+    const RTE_DEFAULTS = {          // 표는 서식이 빠져도 항상 선이 보이게 기본 모양을 채워 줌
+      TABLE: { 'border-collapse': 'collapse', 'width': '100%' },
+      TD: { 'border': '1px solid #94a3b8', 'padding': '4px 8px', 'vertical-align': 'top' },
+      TH: { 'border': '1px solid #94a3b8', 'padding': '4px 8px', 'vertical-align': 'top', 'background-color': '#f1f5f9', 'font-weight': 'bold', 'text-align': 'left' },
+    };
+    function rteCleanStyle(styleText) {
+      const out = [];
+      String(styleText || '').split(';').forEach(d => {
+        const i = d.indexOf(':'); if (i < 0) return;
+        const k = d.slice(0, i).trim().toLowerCase(), v = d.slice(i + 1).trim();
+        if (RTE_STYLE[k] && RTE_STYLE[k](v)) out.push(`${k}: ${v}`);
+      });
+      return out.join('; ');
+    }
+    function rteMergeStyle(sty, defaults) {
+      const map = new Map();
+      String(sty || '').split(';').forEach(d => { const i = d.indexOf(':'); if (i > 0) map.set(d.slice(0, i).trim(), d.slice(i + 1).trim()); });
+      Object.entries(defaults).forEach(([k, v]) => { if (!map.has(k)) map.set(k, v); });
+      return [...map].map(([k, v]) => `${k}: ${v}`).join('; ');
+    }
+    // 허용한 태그·서식만 남기고 나머지(스크립트, 이벤트, 링크, 바깥 이미지 주소 등)는 모두 제거
+    function sanitizeRich(html) {
+      const doc = new DOMParser().parseFromString('<div>' + String(html || '') + '</div>', 'text/html');
+      const out = document.createElement('div');
+      const walk = (src, dst) => {
+        src.childNodes.forEach(n => {
+          if (n.nodeType === 3) { dst.appendChild(document.createTextNode(n.textContent)); return; }
+          if (n.nodeType !== 1) return;
+          const tag = n.tagName;
+          if (RTE_SKIP.has(tag.toUpperCase())) return;
+          if (tag === 'IMG') {                                          // 사진은 이 앱이 만든 아이디(data-img)만 허용, 바깥 주소(src)는 버림
+            const id = n.getAttribute('data-img') || '';
+            if (!/^img_[a-z0-9]{4,40}$/.test(id)) return;
+            const img = document.createElement('img'), w = rteCleanStyle(n.getAttribute('style')).match(/(?:^|; )width: ([^;]+)/);
+            img.setAttribute('data-img', id);
+            img.setAttribute('style', `width: ${w ? w[1] : '50%'}; max-width: 100%`);
+            dst.appendChild(img); return;
+          }
+          let el;
+          if (tag === 'FONT') {                                         // 예전 방식 <font> 는 span 서식으로 변환
+            el = document.createElement('span');
+            const st = [];
+            if (n.getAttribute('color')) st.push('color: ' + n.getAttribute('color'));
+            if (n.getAttribute('face')) st.push('font-family: ' + n.getAttribute('face'));
+            const sty = rteCleanStyle(st.join('; ') + ';' + (n.getAttribute('style') || ''));
+            if (sty) el.setAttribute('style', sty);
+          } else if (RTE_TAGS.has(tag)) {
+            el = document.createElement(tag.toLowerCase());
+            let sty = rteCleanStyle(n.getAttribute('style'));
+            if (RTE_DEFAULTS[tag]) sty = rteMergeStyle(sty, RTE_DEFAULTS[tag]);
+            if (sty && tag !== 'BR') el.setAttribute('style', sty);
+          } else { walk(n, dst); return; }                              // 모르는 태그는 안의 글자만 남김
+          if (tag !== 'BR') walk(n, el);
+          dst.appendChild(el);
+        });
+      };
+      walk(doc.body.firstChild, out);
+      const h = out.innerHTML;
+      return h.length > 200000 ? '' : h;
+    }
+    const plainToHtml = t => escapeHtml(t || '').replace(/\n/g, '<br>');
+    const rteHasFormat = h => /<(b|strong|i|em|u|s|strike|span|ul|ol|li|h[1-3]|sub|sup|table|img)\b/i.test(h || '');
+    // 서식 HTML → 줄 단위 HTML 조각들 (인쇄·일반 글자 추출용). 목록은 번호/점을 붙여 줘요.
+    function richToLines(html) {
+      const root = document.createElement('div');
+      root.innerHTML = sanitizeRich(html);
+      const lines = []; let cur = '';
+      const hasContent = h => h.replace(/<(?!img\b)[^>]*>|&nbsp;/g, '').trim();
+      const flush = () => { if (hasContent(cur)) lines.push(cur); cur = ''; };
+      const walk = node => node.childNodes.forEach(n => {
+        if (n.nodeType === 3) { cur += escapeHtml(n.textContent); return; }
+        if (n.nodeType !== 1) return;
+        const t = n.tagName;
+        if (t === 'BR') { flush(); return; }
+        if (t === 'IMG') { cur += `<img data-img="${n.getAttribute('data-img')}" style="${escapeHtml(n.getAttribute('style') || '')}">`; return; }
+        if (t === 'TABLE') { flush(); lines.push(n.outerHTML); return; }          // 표는 통째로 한 덩어리
+        if (t === 'UL' || t === 'OL') {
+          let i = 0;
+          n.childNodes.forEach(li => { if (li.nodeType === 1 && li.tagName === 'LI') { flush(); walk(li); if (hasContent(cur)) { i++; cur = (t === 'OL' ? i + '. ' : '• ') + cur; } flush(); } });
+          return;
+        }
+        if (['DIV', 'P', 'LI', 'H1', 'H2', 'H3'].includes(t)) { flush(); walk(n); flush(); return; }
+        const sty = n.getAttribute('style'), tg = t.toLowerCase();
+        cur += `<${tg}${sty ? ` style="${escapeHtml(sty)}"` : ''}>`; walk(n); cur += `</${tg}>`;
+      });
+      walk(root); flush();
+      return lines;
+    }
+    function richToText(html) {
+      const tmp = document.createElement('div');
+      return richToLines(html).map(l => {
+        tmp.innerHTML = l;
+        if (l.startsWith('<table')) return [...tmp.querySelectorAll('tr')].map(tr => [...tr.children].map(c => c.textContent.trim()).join(' | ')).join('\n');
+        return tmp.textContent;
+      }).filter(t => t.trim()).join('\n');
+    }
+    const richView = (html, plain) => html ? sanitizeRich(html) : plainToHtml(plain);
+
+    const RTE_SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32];
+    let rteSaved = null;
+    document.addEventListener('selectionchange', () => {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const r = sel.getRangeAt(0), c = r.commonAncestorContainer, body = (c.nodeType === 1 ? c : c.parentElement) && (c.nodeType === 1 ? c : c.parentElement).closest('.rte-body');
+      if (body) rteSaved = { body, range: r.cloneRange() };
+      document.querySelectorAll('.rte-wrap').forEach(w => { const bar = w.querySelector('.rte-tbl'); if (bar) bar.classList.toggle('hidden', !currentCell(w.querySelector('.rte-body'))); });
+    });
+    function rteRestore(body) {
+      const sel = window.getSelection();
+      if (sel.rangeCount && body.contains(sel.anchorNode) && document.activeElement === body) return;   // 이미 편집 중이면 그대로 (선택·커서 유지)
+      body.focus();
+      if (rteSaved && rteSaved.body === body) { sel.removeAllRanges(); sel.addRange(rteSaved.range); }   // 글꼴 선택칸·색상 선택기처럼 포커스가 옮겨 갔을 때만 복원
+    }
+    function rteExec(body, cmd, val) {
+      rteRestore(body);
+      document.execCommand('styleWithCSS', false, true);
+      const ex = (c, v) => document.execCommand(c, false, v);
+      if (cmd === 'bold') ex('bold'); else if (cmd === 'italic') ex('italic'); else if (cmd === 'underline') ex('underline'); else if (cmd === 'strike') ex('strikeThrough');
+      else if (cmd === 'ul' || cmd === 'ol') {                          // 목록으로 바꿀 때 커서가 줄 맨 앞으로 튀는 것을 막기 위해, 글자 위치를 기억했다가 같은 위치로 되돌림
+        const sel = window.getSelection();
+        let pos = null;
+        if (sel.rangeCount && sel.isCollapsed && body.contains(sel.anchorNode)) { const r = document.createRange(); r.selectNodeContents(body); r.setEnd(sel.anchorNode, sel.anchorOffset); pos = r.toString().length; }
+        ex(cmd === 'ul' ? 'insertUnorderedList' : 'insertOrderedList');
+        if (pos !== null) {
+          const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT); let n, acc = 0;
+          while ((n = w.nextNode())) {
+            if (acc + n.nodeValue.length >= pos) { const r = document.createRange(); r.setStart(n, pos - acc); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); break; }
+            acc += n.nodeValue.length;
+          }
+        }
+      }
+      else if (cmd === 'clear') ex('removeFormat');
+      else if (cmd === 'color') ex('foreColor', val); else if (cmd === 'hilite') ex('hiliteColor', val);
+      else if (cmd === 'font' && val) ex('fontName', val);
+      else if (cmd === 'size' && val) {                                  // execCommand 는 1~7 단계만 지원해서, 가장 큰 단계로 적용한 뒤 원하는 px 값으로 바꿈
+        ex('fontSize', '7');
+        body.querySelectorAll('font[size="7"], span').forEach(el => {
+          if (el.tagName === 'FONT') { const sp = document.createElement('span'); sp.style.fontSize = val + 'px'; sp.innerHTML = el.innerHTML; el.replaceWith(sp); }
+          else if (/xxx-large/.test(el.style.fontSize)) el.style.fontSize = val + 'px';
+        });
+      }
+      body.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function buildRte(box) {
+      const btn = (cmd, label, title) => `<button type="button" data-cmd="${cmd}" title="${title}" style="font-family:inherit" class="min-w-[26px] h-7 px-1.5 rounded-md text-xs hover:bg-slate-100 text-slate-700 transition">${label}</button>`;
+      const tb = (op, label) => `<button type="button" data-tbl="${op}" style="font-family:inherit" class="px-2 h-6 rounded-md bg-white border border-slate-200 hover:bg-slate-100 transition ${op === 'tbl-' ? 'text-red-500' : ''}">${label}</button>`;
+      const swatch = (cmd, title, face, color) => `<span class="inline-flex items-center"><button type="button" data-cmd="${cmd}-apply" title="${title} 적용" style="font-family:inherit" class="h-7 pl-1.5 pr-1 rounded-l-md text-xs hover:bg-slate-100 text-slate-700 transition">${face}</button><label title="${title} 고르기" class="relative h-7 w-4 rounded-r-md hover:bg-slate-100 cursor-pointer flex items-center justify-center text-[8px] text-slate-400">▾<input type="color" data-cmd="${cmd}-pick" value="${color}" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"></label></span>`;
+      box.innerHTML = `
+        <div class="rte-bar flex flex-wrap items-center gap-1 px-2 py-1.5 border-b border-slate-200 bg-white rounded-t-xl">
+          <select data-cmd="font" title="글꼴" class="h-7 border border-slate-200 rounded-md text-[11px] bg-white px-1 max-w-[110px]"><option value="">글꼴</option>${PRINT_FONTS.map(f => `<option value="${escapeHtml(f.family)}">${escapeHtml(f.name)}</option>`).join('')}<option value="Malgun Gothic">맑은 고딕</option><option value="Batang">바탕</option><option value="monospace">고정폭</option></select>
+          <select data-cmd="size" title="글씨 크기" class="h-7 border border-slate-200 rounded-md text-[11px] bg-white px-1"><option value="">크기</option>${RTE_SIZES.map(n => `<option value="${n}">${n}</option>`).join('')}</select>
+          ${btn('bold', '<b>B</b>', '굵게 (Ctrl+B)')}${btn('italic', '<i>I</i>', '기울임 (Ctrl+I)')}${btn('underline', '<u>U</u>', '밑줄 (Ctrl+U)')}${btn('strike', '<s>S</s>', '취소선')}
+          ${swatch('color', '글자색', '<span data-sw="color" style="border-bottom:3px solid #ef4444;line-height:1">A</span>', '#ef4444')}
+          ${swatch('hilite', '형광펜', '<span data-sw="hilite" style="background:#fde047;padding:0 3px;border-radius:2px">가</span>', '#fde047')}
+          ${btn('ul', '• 목록', '글머리 기호 목록')}${btn('ol', '1. 목록', '번호 목록')}
+          ${btn('tbl-open', '▦ 표', '표 넣기')}${btn('img-open', '🖼 사진', '사진 넣기 (붙여넣기·끌어다 놓기도 돼요)')}
+          ${btn('clear', '서식 지우기', '선택한 글자의 서식 지우기')}
+          <input type="file" accept="image/*" multiple data-cmd="img-file" class="hidden">
+        </div>
+        <div class="rte-tbl hidden flex flex-wrap items-center gap-1 px-2 py-1 border-b border-slate-200 bg-slate-50 text-[11px] text-slate-600"><span class="font-semibold mr-1">표</span>${tb('row+', '행 추가')}${tb('col+', '열 추가')}${tb('row-', '행 삭제')}${tb('col-', '열 삭제')}${tb('tbl-', '표 삭제')}</div>
+        <div class="rte-pop hidden absolute z-20 bg-white border border-slate-200 rounded-xl shadow-xl p-3 space-y-2 text-xs text-slate-600" style="left:8px;top:44px">
+          <div class="flex items-center gap-2">행 <input type="number" data-tbl-rows min="1" max="30" value="3" class="w-14 border border-slate-200 rounded-md px-1.5 py-1"> 열 <input type="number" data-tbl-cols min="1" max="10" value="3" class="w-14 border border-slate-200 rounded-md px-1.5 py-1"></div>
+          <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" data-tbl-head checked> 첫 줄을 제목으로</label>
+          <div class="flex justify-end gap-1.5"><button type="button" data-cmd="tbl-cancel" style="font-family:inherit" class="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200">취소</button><button type="button" data-cmd="tbl-insert" style="font-family:inherit" class="px-2.5 py-1 rounded-md bg-slate-800 text-white hover:bg-slate-700">삽입</button></div>
+        </div>
+        <div class="rte-imgbar hidden absolute z-20 bg-white border border-slate-200 rounded-lg shadow-lg flex gap-1 p-1 text-[11px]">${['25', '50', '75', '100'].map(p => `<button type="button" data-imgw="${p}" style="font-family:inherit" class="px-2 h-6 rounded-md hover:bg-slate-100">${p}%</button>`).join('')}<button type="button" data-imgdel style="font-family:inherit" class="px-2 h-6 rounded-md text-red-500 hover:bg-red-50">삭제</button></div>
+        <div class="rte-body" contenteditable="true" data-placeholder="${escapeHtml(box.dataset.placeholder || '')}" style="min-height:${parseInt(box.dataset.minh) || 100}px"></div>`;
+      const body = box.querySelector('.rte-body'), pop = box.querySelector('.rte-pop'), imgBar = box.querySelector('.rte-imgbar'), colors = { color: '#ef4444', hilite: '#fde047' };
+      let selImg = null;
+      const hideImgBar = () => { imgBar.classList.add('hidden'); if (selImg) selImg.style.outline = ''; selImg = null; };
+      box.addEventListener('mousedown', e => {
+        if (e.target.closest('button')) e.preventDefault();                                   // 버튼을 눌러도 선택 영역이 풀리지 않게
+        if (!e.target.closest('img[data-img]') && !e.target.closest('.rte-imgbar')) hideImgBar();
+        if (!e.target.closest('.rte-pop') && !e.target.closest('[data-cmd=tbl-open]')) pop.classList.add('hidden');
+      });
+      box.addEventListener('click', e => {
+        const t = e.target.closest('button');
+        if (!t) return;
+        if (t.dataset.tbl) { rteTableOp(body, t.dataset.tbl); return; }
+        if (t.dataset.imgw && selImg) { selImg.style.width = t.dataset.imgw + '%'; body.dispatchEvent(new Event('input', { bubbles: true })); return; }
+        if (t.hasAttribute('data-imgdel') && selImg) { selImg.remove(); hideImgBar(); body.dispatchEvent(new Event('input', { bubbles: true })); return; }
+        const c = t.dataset.cmd; if (!c) return;
+        if (c === 'color-apply') rteExec(body, 'color', colors.color); else if (c === 'hilite-apply') rteExec(body, 'hilite', colors.hilite);
+        else if (c === 'tbl-open') pop.classList.toggle('hidden');
+        else if (c === 'tbl-cancel') pop.classList.add('hidden');
+        else if (c === 'tbl-insert') { insertTable(body, parseInt(pop.querySelector('[data-tbl-rows]').value), parseInt(pop.querySelector('[data-tbl-cols]').value), pop.querySelector('[data-tbl-head]').checked); pop.classList.add('hidden'); }
+        else if (c === 'img-open') box.querySelector('[data-cmd=img-file]').click();
+        else rteExec(body, c);
+      });
+      box.addEventListener('change', e => {
+        const el = e.target, c = el.dataset.cmd; if (!c) return;
+        if (c === 'font' || c === 'size') { rteExec(body, c, el.value); el.selectedIndex = 0; }
+        else if (c === 'img-file') { [...el.files].forEach(f => insertImageFile(body, f)); el.value = ''; }
+        else if (c === 'color-pick' || c === 'hilite-pick') {
+          const kind = c.split('-')[0]; colors[kind] = el.value; rteExec(body, kind, el.value);
+          const sw = box.querySelector(`[data-sw="${kind}"]`);
+          if (kind === 'color') sw.style.borderBottomColor = el.value; else sw.style.background = el.value;
+        }
+      });
+      body.addEventListener('click', e => {                               // 사진을 누르면 크기 조절 막대 표시
+        const img = e.target.closest && e.target.closest('img[data-img]');
+        if (!img) return;
+        hideImgBar(); selImg = img; img.style.outline = '2px solid #3b82f6';
+        const wr = box.getBoundingClientRect(), r = img.getBoundingClientRect();
+        imgBar.classList.remove('hidden');
+        imgBar.style.left = Math.max(4, Math.min(r.left - wr.left, wr.width - imgBar.offsetWidth - 4)) + 'px';
+        imgBar.style.top = Math.max(4, r.top - wr.top - 34) + 'px';
+      });
+      body.addEventListener('paste', e => {                               // 붙여넣기: 사진은 사진으로, 글은 안전한 서식만 남겨서 넣음
+        const files = [...(e.clipboardData.files || [])].filter(f => /^image\//.test(f.type));
+        e.preventDefault();
+        if (files.length) { files.forEach(f => insertImageFile(body, f)); return; }
+        const html = e.clipboardData.getData('text/html'), text = e.clipboardData.getData('text/plain');
+        document.execCommand('insertHTML', false, html ? sanitizeRich(html) : plainToHtml(text));
+      });
+      body.addEventListener('keydown', e => {                             // 표 안에서 Tab / Shift+Tab 으로 칸 이동 (마지막 칸에서 Tab 하면 행이 추가됨)
+        if (e.key !== 'Tab' || e.isComposing) return;
+        const cell = currentCell(body);
+        if (!cell) return;
+        e.preventDefault();
+        const list = () => [...cell.closest('table').querySelectorAll('th, td')], i = list().indexOf(cell);
+        let next = list()[i + (e.shiftKey ? -1 : 1)];
+        if (!next && !e.shiftKey) { rteTableOp(body, 'row+'); next = list()[i + 1]; }
+        focusCell(next);
+      });
+      body.addEventListener('dragover', e => { if ([...(e.dataTransfer.types || [])].includes('Files')) e.preventDefault(); });
+      body.addEventListener('drop', e => {                                // 사진 파일을 끌어다 놓기
+        const files = [...(e.dataTransfer.files || [])].filter(f => /^image\//.test(f.type));
+        if (files.length) { e.preventDefault(); files.forEach(f => insertImageFile(body, f)); }
+      });
+    }
+    function rteSet(id, html) { const b = document.querySelector(`#${id}Rte .rte-body`); b.innerHTML = html ? sanitizeRich(html) : ''; hydrateImages(b); }
+    function rteGet(id) { return sanitizeRich(document.querySelector(`#${id}Rte .rte-body`).innerHTML); }
+    function rteFocus(id) { document.querySelector(`#${id}Rte .rte-body`).focus(); }
+    document.addEventListener('click', e => { const img = e.target.closest && e.target.closest('.rte-view img[data-img]'); if (img && img.src) window.open(img.src, '_blank'); });   // 상세 화면에서 사진을 누르면 크게 보기
+    document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('[data-rte]').forEach(buildRte));   // 모든 스크립트가 로드된 뒤에 편집기를 만듦
+
+    // ===================== 표 · 사진 =====================
+    // 사진은 편집기 안에 <img data-img="아이디"> 로만 저장해요. 실제 사진 파일은 이 기기(IndexedDB)에 두고,
+    // 로그인 중이면 Supabase Storage에도 올려서 다른 기기에서 내려받아 보여줘요.
+    const IMG_MAX_SIDE = 1280;
+    const idb = () => new Promise((res, rej) => { const r = indexedDB.open('app_images_v1', 1); r.onupgradeneeded = () => r.result.createObjectStore('images'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    async function imgGet(id) { const db = await idb(); return new Promise((res, rej) => { const q = db.transaction('images').objectStore('images').get(id); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
+    async function imgPut(id, rec) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('images', 'readwrite'); tx.objectStore('images').put(rec, id); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+    async function imgPending() { const db = await idb(); return new Promise((res, rej) => { const out = []; const q = db.transaction('images').objectStore('images').openCursor(); q.onsuccess = () => { const c = q.result; if (c) { if (!c.value.uploaded) out.push(c.key); c.continue(); } else res(out); }; q.onerror = () => rej(q.error); }); }
+    const newImgId = () => 'img_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const imgUrls = new Map();            // 아이디 → blob: 주소 (화면에서 다시 쓰기 위한 보관)
+    const dataUrlCache = new Map();
+
+    // 사진을 긴 변 1280px 이하로 줄이고 JPEG(작은 PNG는 PNG)로 압축
+    async function processImage(file) {
+      if (!/^image\//.test(file.type)) throw new Error('이미지 파일이 아니에요.');
+      let bmp;
+      try { bmp = await createImageBitmap(file); } catch (e) { throw new Error('이 형식의 사진은 불러올 수 없어요. (JPG, PNG, WebP를 권장해요)'); }
+      const scale = Math.min(1, IMG_MAX_SIDE / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * scale)), h = Math.max(1, Math.round(bmp.height * scale));
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, w, h); cx.drawImage(bmp, 0, 0, w, h);
+      const toBlob = (t, q) => new Promise(r => cv.toBlob(r, t, q));
+      let blob = (file.type === 'image/png' && file.size < 400 * 1024) ? await toBlob('image/png') : await toBlob('image/jpeg', 0.8);
+      if (blob && blob.size > 1.5 * 1024 * 1024) blob = await toBlob('image/jpeg', 0.6);
+      if (!blob) throw new Error('사진을 처리하지 못했어요.');
+      return { blob, w, h };
+    }
+    async function insertImageFile(body, file) {
+      try {
+        const { blob, w } = await processImage(file);
+        const id = newImgId();
+        await imgPut(id, { blob, type: blob.type, uploaded: false, at: Date.now() });
+        const url = URL.createObjectURL(blob); imgUrls.set(id, url);
+        rteRestore(body);
+        document.execCommand('insertHTML', false, `<img data-img="${id}" src="${url}" style="width: ${Math.min(w, 480)}px; max-width: 100%">`);
+        body.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (e) { uiAlert(e.message || '사진을 넣지 못했어요.'); }
+    }
+    async function imageUrl(id) {
+      if (imgUrls.has(id)) return imgUrls.get(id);
+      let rec = await imgGet(id).catch(() => null);
+      if (!rec && window.syncStorage && window.syncStorage.ready()) {               // 이 기기에 없으면 클라우드에서 내려받음
+        const blob = await window.syncStorage.download(id).catch(() => null);
+        if (blob) { rec = { blob, type: blob.type, uploaded: true, at: Date.now() }; await imgPut(id, rec).catch(() => {}); }
+      }
+      if (!rec) return null;
+      const url = URL.createObjectURL(rec.blob); imgUrls.set(id, url); return url;
+    }
+    async function hydrateImages(root) {
+      await Promise.all([...root.querySelectorAll('img[data-img]')].map(async img => {
+        const url = await imageUrl(img.dataset.img);
+        if (url) { img.src = url; img.removeAttribute('title'); }
+        else { img.title = '사진을 찾을 수 없어요 (다른 기기에서 올린 사진이 아직 동기화되지 않았을 수 있어요)'; img.style.cssText += ';min-width:80px;min-height:48px;background:#f1f5f9;border:1px dashed #cbd5e1;'; }
+      }));
+    }
+    async function uploadPendingImages() {
+      if (!window.syncStorage || !window.syncStorage.ready()) return;
+      try {
+        for (const id of await imgPending()) {
+          const rec = await imgGet(id); if (!rec) continue;
+          await window.syncStorage.upload(id, rec.blob, rec.type);
+          rec.uploaded = true; await imgPut(id, rec);
+        }
+      } catch (e) { console.warn('사진 업로드 대기 중', e); }
+    }
+    window.uploadPendingImages = uploadPendingImages;
+    async function imageDataUrl(id) {                                                // 인쇄·백업용 data: 주소
+      if (dataUrlCache.has(id)) return dataUrlCache.get(id);
+      if (!(await imageUrl(id))) return null;
+      const rec = await imgGet(id); if (!rec) return null;
+      const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(null); fr.readAsDataURL(rec.blob); });
+      if (url) dataUrlCache.set(id, url);
+      return url;
+    }
+    async function attachImageSources(html) {
+      html = String(html || '');
+      for (const id of new Set([...html.matchAll(/data-img="(img_[a-z0-9]+)"/g)].map(m => m[1]))) {
+        const url = await imageDataUrl(id);
+        if (url) html = html.split(`<img data-img="${id}"`).join(`<img src="${url}" data-img="${id}"`);
+      }
+      return html;
+    }
+    async function backupImages() {
+      const ids = new Set();
+      state.protocols.forEach(p => [p.notesHtml, p.stepsHtml].forEach(h => { if (h) for (const m of h.matchAll(/data-img="(img_[a-z0-9]+)"/g)) ids.add(m[1]); }));
+      const out = {};
+      for (const id of ids) { const u = await imageDataUrl(id); if (u) out[id] = u; }
+      return out;
+    }
+    async function buildBackupJsonWithImages() {
+      const o = JSON.parse(buildBackupJson()), imgs = await backupImages();
+      if (Object.keys(imgs).length) o.images = imgs;
+      return JSON.stringify(o, null, 2);
+    }
+    async function restoreBackupImages(images) {
+      for (const [id, url] of Object.entries(images || {})) {
+        try {
+          if (await imgGet(id)) continue;
+          const blob = await (await fetch(url)).blob();
+          await imgPut(id, { blob, type: blob.type, uploaded: false, at: Date.now() });
+        } catch (e) { /* 건너뜀 */ }
+      }
+      uploadPendingImages();
+    }
+
+    // ── 표 ──
+    const TD_STYLE = 'border: 1px solid #94a3b8; padding: 4px 8px; vertical-align: top';
+    const TH_STYLE = TD_STYLE + '; background-color: #f1f5f9; font-weight: bold; text-align: left';
+    function tableHtml(rows, cols, header) {
+      let h = '<table data-new="1" style="border-collapse: collapse; width: 100%"><tbody>';
+      for (let r = 0; r < rows; r++) {
+        h += '<tr>';
+        for (let c = 0; c < cols; c++) h += (header && r === 0) ? `<th style="${TH_STYLE}"><br></th>` : `<td style="${TD_STYLE}"><br></td>`;
+        h += '</tr>';
+      }
+      return h + '</tbody></table><br>';
+    }
+    function insertTable(body, rows, cols, header) {
+      rows = Math.max(1, Math.min(30, rows || 3)); cols = Math.max(1, Math.min(10, cols || 3));
+      rteRestore(body);
+      document.execCommand('insertHTML', false, tableHtml(rows, cols, header));
+      const t = body.querySelector('table[data-new]');
+      if (t) {
+        t.removeAttribute('data-new');
+        const first = t.querySelector('th, td'), sel = window.getSelection(), r = document.createRange();
+        r.selectNodeContents(first); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
+      }
+      body.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function focusCell(c) {
+      if (!c) return;
+      const sel = window.getSelection(), r = document.createRange();
+      r.selectNodeContents(c); r.collapse(false); sel.removeAllRanges(); sel.addRange(r);
+    }
+    function currentCell(body) {
+      const sel = window.getSelection(), n = sel.anchorNode;
+      if (!n) return null;
+      const el = n.nodeType === 1 ? n : n.parentElement, cell = el && el.closest('td, th');
+      return cell && body.contains(cell) ? cell : null;
+    }
+    function rteTableOp(body, op) {
+      rteRestore(body);
+      const cell = currentCell(body);
+      if (!cell) return;
+      const tr = cell.parentElement, table = cell.closest('table'), idx = [...tr.children].indexOf(cell);
+      const mk = (tag) => { const c = document.createElement(tag); c.setAttribute('style', tag === 'th' ? TH_STYLE : TD_STYLE); c.innerHTML = '<br>'; return c; };
+      if (op === 'row+') { const nr = document.createElement('tr'); [...tr.children].forEach(() => nr.appendChild(mk('td'))); tr.after(nr); }
+      else if (op === 'col+') { [...table.rows].forEach(row => { const ref = row.children[idx]; if (ref) ref.after(mk(ref.tagName.toLowerCase())); }); }
+      else if (op === 'row-') {
+        const near = tr.nextElementSibling || tr.previousElementSibling;
+        if (near) { tr.remove(); focusCell(near.children[Math.min(idx, near.children.length - 1)]); } else table.remove();
+      }
+      else if (op === 'col-') {
+        const near = cell.nextElementSibling || cell.previousElementSibling;
+        if (near) { [...table.rows].forEach(row => { if (row.children[idx]) row.children[idx].remove(); }); focusCell(near); } else table.remove();
+      }
+      else if (op === 'tbl-') table.remove();
+      body.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
     // ===================== 이모지 아이콘 선택 =====================
     const EMOJI_LIST = [
       ['🧪','시험관 실험 test tube'],['🔬','현미경 microscope'],['🧬','dna 유전자 gene'],['🧫','배양 페트리 petri dish'],['💉','주사 syringe'],['🦠','세균 바이러스 미생물 microbe'],
@@ -2942,6 +3368,7 @@
       document.getElementById('protocolForm').reset();
       document.getElementById('protoEditId').value = editId || '';
       setFormIcon('');
+      rteSet('protoNotes', ''); rteSet('protoSteps', '');
       document.getElementById('protoReagentsContainer').innerHTML = '';
 
       if (editId) {
@@ -2950,8 +3377,8 @@
           document.getElementById('protocolModalTitle').innerHTML = '<span>🔬</span> 실험 Protocol 수정';
           document.getElementById('protoTitleInput').value = proto.title;
           setFormIcon(proto.icon || '');
-          document.getElementById('protoNotesInput').value = proto.notes;
-          document.getElementById('protoStepsInput').value = proto.steps;
+          rteSet('protoNotes', richView(proto.notesHtml, proto.notes));
+          rteSet('protoSteps', richView(proto.stepsHtml, proto.steps));
           (proto.reagents || []).forEach(r => addReagentRow(r));
           if (catByKey(proto.category)) select.value = proto.category;
         }
@@ -2983,8 +3410,9 @@
 
       document.getElementById('activeProtocolDetailId').value = id;
       document.getElementById('detailProtoTitle').innerText = (proto.icon ? proto.icon + ' ' : '') + proto.title;
-      document.getElementById('detailProtoNotes').innerText = proto.notes;
-      document.getElementById('detailProtoSteps').innerText = proto.steps;
+      document.getElementById('detailProtoNotes').innerHTML = richView(proto.notesHtml, proto.notes);
+      document.getElementById('detailProtoSteps').innerHTML = richView(proto.stepsHtml, proto.steps);
+      hydrateImages(document.getElementById('detailProtoNotes')); hydrateImages(document.getElementById('detailProtoSteps'));
 
       const catObj = catByKey(proto.category);
       const badge = document.getElementById('detailProtoCatBadge');
@@ -3021,12 +3449,14 @@
       const editId = document.getElementById('protoEditId').value;
       const category = document.getElementById('protoCategorySelect').value;
       const title = document.getElementById('protoTitleInput').value.trim();
-      const notes = document.getElementById('protoNotesInput').value.trim();
-      const steps = document.getElementById('protoStepsInput').value.trim();
+      const notesHtml = rteGet('protoNotes'), stepsHtml = rteGet('protoSteps');
+      const notes = richToText(notesHtml).trim(), steps = richToText(stepsHtml).trim();
       const reagents = collectReagentRows();
       const icon = document.getElementById('protoIconInput').value;
 
       if (!title) return;
+      if (!notes && !/<(img|table)\b/.test(notesHtml)) { uiAlert('주의 및 참고사항을 입력해 주세요.'); rteFocus('protoNotes'); return; }
+      if (!steps && !/<(img|table)\b/.test(stepsHtml)) { uiAlert('실험 절차를 입력해 주세요.'); rteFocus('protoSteps'); return; }
       if (!category || !catByKey(category)) { uiAlert('먼저 카테고리를 만들어 주세요. (프로토콜 화면의 "+ 새 카테고리")'); return; }
 
       if (editId) {
@@ -3035,16 +3465,20 @@
           const movedCat = state.protocols[idx].category !== category;
           state.protocols[idx] = { ...state.protocols[idx], category, title, notes, steps, reagents };
           if (icon) state.protocols[idx].icon = icon; else delete state.protocols[idx].icon;
+          if (rteHasFormat(notesHtml)) state.protocols[idx].notesHtml = notesHtml; else delete state.protocols[idx].notesHtml;
+          if (rteHasFormat(stepsHtml)) state.protocols[idx].stepsHtml = stepsHtml; else delete state.protocols[idx].stepsHtml;
           if (movedCat) delete state.protocols[idx].ord;          // 다른 카테고리로 옮기면 맨 아래에 놓임
         }
       } else {
         state.protocols.push({
           id: 'proto_' + Date.now(),
-          category, title, notes, steps, reagents, ...(icon ? { icon } : {})
+          category, title, notes, steps, reagents, ...(icon ? { icon } : {}),
+          ...(rteHasFormat(notesHtml) ? { notesHtml } : {}), ...(rteHasFormat(stepsHtml) ? { stepsHtml } : {})
         });
       }
 
       saveLocalStorage();
+      uploadPendingImages();
       closeProtocolModal();
       renderAll();
       showToast('저장했어요', '실험 프로토콜이 저장되었어요 🔬');
@@ -4421,6 +4855,8 @@
       .subitem { margin-left: 24px; font-size: 9.5pt; padding: 2px 0; color: #334155; }
       .num { display: inline-block; min-width: 22px; font-weight: bold; color: #475569; }
       .snum { display: inline-block; min-width: 16px; color: #64748b; }
+      .step img, .note img { max-width: 100%; height: auto; display: block; margin: 4px 0; }
+      .step-table { margin: 4px 0 4px 18px; }
       .tag { font-size: 7.5pt; border: 1px solid #ef4444; color: #ef4444; padding: 0 4px; border-radius: 3px; margin-left: 6px; }
       .cat { font-size: 8pt; font-weight: normal; color: #64748b; margin-left: 6px; }
       .note { background: #fffbeb; border: 1px solid #fcd34d; padding: 6px 9px; border-radius: 6px; font-size: 9.5pt; white-space: pre-line; margin-bottom: 8px; }
@@ -4457,7 +4893,7 @@
       css = css.replace(/(min-width|margin-left): (\d+)px/g, (m, k, n) => `${k}: ${Math.round(n * scale)}px`);
       css = css.replace('width: 11px; height: 11px;', `width: ${Math.round(11 * scale)}px; height: ${Math.round(11 * scale)}px;`);
       css = css.replace('.item { padding: 6px 0;', `.item { padding: ${gapItem}px 0;`).replace('padding: 2px 0; color: #334155;', `padding: ${gapSub}px 0; color: #334155;`);   // 큰 계획 사이 / 세부 계획 사이 간격
-      return fontFaceCss(font) + '\n' + css.replace(/font-family: [^;]+;/, `font-family: ${fontStack(font)};`);
+      return PRINT_FONTS.map(fontFaceCss).join('\n') + '\n' + css.replace(/font-family: [^;]+;/, `font-family: ${fontStack(font)};`);
     }
     function updatePrintPreview() {
       const scale = parseInt(document.getElementById('printScaleInput').value) / 100;
@@ -4542,7 +4978,7 @@
       return diff === 0 ? 'D-DAY' : diff > 0 ? `D-${diff}` : `D+${-diff}`;
     }
 
-    function doPrintDay() {
+    async function doPrintDay() {
       const date = document.getElementById('printDateInput').value;
       if (!date) { uiAlert('날짜를 선택해주세요.'); return; }
       const includeDeadlines = document.getElementById('printIncludeDeadlines').checked;
@@ -4574,17 +5010,21 @@
         }
       }
 
-      protoIds.forEach(id => {
+      for (const id of protoIds) {
         const p = state.protocols.find(x => x.id === id);
-        if (!p) return;
-        const steps = (p.steps || '').split('\n').map(l => l.trim()).filter(Boolean);
+        if (!p) continue;
+        let steps = p.stepsHtml ? richToLines(p.stepsHtml) : (p.steps || '').split('\n').map(l => l.trim()).filter(Boolean).map(escapeHtml);
+        let noteLines = p.notesHtml ? richToLines(p.notesHtml) : [];
+        steps = await Promise.all(steps.map(attachImageSources));           // 사진은 인쇄용으로 data: 주소를 붙임
+        noteLines = await Promise.all(noteLines.map(attachImageSources));
+        const note = p.notesHtml ? noteLines.join('<br>') : escapeHtml(p.notes || '');
         body += `<div class="block"><h2>${escapeHtml(p.icon || '🔬')} ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
-          ${p.notes ? `<div class="note">⚠ ${escapeHtml(p.notes)}</div>` : ''}
-          ${steps.map(l => `<div class="step"><span class="box"></span>${escapeHtml(l)}</div>`).join('')}
+          ${(p.notes || p.notesHtml) ? `<div class="note">⚠ ${note}</div>` : ''}
+          ${steps.map(l => l.startsWith('<table') ? `<div class="step-table">${l}</div>` : `<div class="step"><span class="box"></span>${l}</div>`).join('')}
           ${p.reagents && p.reagents.length ? `<table><tr><th>시약</th><th style="width:28mm">1개당</th><th style="width:34mm">× ___ 개 (총량)</th></tr>
             ${p.reagents.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${fmtNum(r.amount)} ${r.unit}</td><td></td></tr>`).join('')}</table>` : ''}
         </div>`;
-      });
+      }
 
       if (includeMemo) {
         body += `<div class="block"><h2>메모</h2>${'<div class="memo-line"></div>'.repeat(8)}</div>`;
@@ -5138,8 +5578,8 @@
       refreshBackupUI();
     }
 
-    function exportBackup() {
-      const blob = new Blob([buildBackupJson()], { type: 'application/json' });
+    async function exportBackup() {
+      const blob = new Blob([await buildBackupJsonWithImages()], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -5160,7 +5600,7 @@
     }
     async function shareBackup() {
       try {
-        const file = new File([buildBackupJson()], backupFileName(), { type: 'application/json' });
+        const file = new File([await buildBackupJsonWithImages()], backupFileName(), { type: 'application/json' });
         await navigator.share({ files: [file], title: '스케줄러 백업' });
         markBackupDone();
         showBackupMessage('백업 파일을 공유했어요. 받는 곳에 저장됐는지 확인해 주세요.', false);
@@ -5193,6 +5633,7 @@
       if (!p || typeof p !== 'object' || !isSafeId(p.id) || typeof p.title !== 'string') return null;
       const q = { ...p, category: (typeof p.category === 'string' && p.category.trim()) ? p.category : 'General' };
       if (!(typeof q.icon === 'string' && q.icon.length <= 16)) delete q.icon;
+      ['notesHtml', 'stepsHtml'].forEach(k => { if (typeof q[k] === 'string') { const h = sanitizeRich(q[k]); if (h) q[k] = h; else delete q[k]; } else delete q[k]; });
       return q;
     }
     function sanitizeCategory(c) {
@@ -5242,7 +5683,11 @@
       if (!data.schedules.length && !data.protocols.length && !data.categories.length && !data.plates.length && !(data.cells && data.cells.length)) {
         return { error: '백업 파일에 불러올 데이터가 없어요.' };
       }
-      return { data, skipped: sc.skipped + pr.skipped + ca.skipped + pl.skipped + ce.skipped, exportedAt: obj.exportedAt };
+      const images = {};
+      if (obj.images && typeof obj.images === 'object') Object.entries(obj.images).slice(0, 300).forEach(([id, u]) => {
+        if (/^img_[a-z0-9]{4,40}$/.test(id) && typeof u === 'string' && u.length < 3000000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u)) images[id] = u;
+      });
+      return { data, images, skipped: sc.skipped + pr.skipped + ca.skipped + pl.skipped + ce.skipped, exportedAt: obj.exportedAt };
     }
 
     // ----- 불러오기: 화면 -----
@@ -5341,6 +5786,7 @@
         return;
       }
       const d = pendingBackup.data;
+      await restoreBackupImages(pendingBackup.images);
       let summary;
       if (mode === 'replace') {
         state.schedules = d.schedules; state.protocols = d.protocols; state.categories = d.categories; state.plates = d.plates;
@@ -5753,6 +6199,12 @@
       } catch (e) { msg('검증하지 못했어요. 연결 상태를 확인해 주세요.', true); }
       updUI();
     }
+    // 사진 파일은 Supabase Storage(비공개 'protocol-images')에 내 폴더로 저장
+    window.syncStorage = {
+      ready: () => !!(sb && user && navigator.onLine),
+      upload: async (id, blob, type) => { const { error } = await sb.storage.from('protocol-images').upload(`${user.id}/${id}`, blob, { contentType: type, upsert: true }); if (error) throw error; },
+      download: async id => { const { data, error } = await sb.storage.from('protocol-images').download(`${user.id}/${id}`); return error ? null : data; },
+    };
     window.syncVerify = () => verify(false);
     window.syncNow = async () => { await pull().catch(() => {}); await flush(); };
     window.syncDeleteLegacy = async () => {
@@ -5778,7 +6230,7 @@
 
     function onSession(session) {
       const u = session && session.user;
-      if (u && (!user || user.id !== u.id)) { user = u; started = true; setStatus('sync'); begin(); }
+      if (u && (!user || user.id !== u.id)) { user = u; started = true; setStatus('sync'); begin().finally(() => { if (window.uploadPendingImages) window.uploadPendingImages(); }); }
       else if (!u && user) { user = null; started = false; if (chan) { sb.removeChannel(chan); chan = null; } setStatus('off'); }
       else if (!u) { user = null; setStatus('off'); if (!sessionStorage.getItem('syncAsked')) { sessionStorage.setItem('syncAsked', '1'); openSyncModal(); } }
       updUI();
@@ -5790,7 +6242,7 @@
       }
       updUI();
     });
-    window.addEventListener('online', () => { if (user) { flush(); pull().catch(() => {}); } });
+    window.addEventListener('online', () => { if (user) { flush(); pull().catch(() => {}); if (window.uploadPendingImages) window.uploadPendingImages(); } });
     window.addEventListener('offline', () => { if (user) setStatus(nOut() ? 'offline' : 'ok'); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden && user) { flush(); pull().catch(() => {}); } });
   })();
