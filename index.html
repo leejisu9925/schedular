@@ -96,6 +96,7 @@
     .rte-body img { max-width: 100%; height: auto; cursor: pointer; border-radius: 6px; }
     .rte-view img { max-width: 100%; height: auto; cursor: zoom-in; border-radius: 6px; }
     .rte-body table, .rte-view table { margin: 6px 0; }
+    .rte-body td, .rte-body th, .rte-view td, .rte-view th { overflow-wrap: anywhere; }
     .rte-wrap:focus-within { box-shadow: 0 0 0 2px #94a3b8; }
     .rte-body { max-height: 320px; overflow-y: auto; padding: 10px 14px; font-size: 14px; line-height: 1.6; outline: none; word-break: break-word; }
     .rte-body:empty::before { content: attr(data-placeholder); color: #94a3b8; pointer-events: none; }
@@ -2740,9 +2741,11 @@
       'border-collapse': v => /^(collapse|separate)$/.test(v),
       'width': RTE_LEN, 'max-width': RTE_LEN,
       'vertical-align': v => /^(top|middle|bottom|baseline)$/.test(v),
+      'height': v => /^\d{1,4}(\.\d+)?px$/.test(v),
+      'table-layout': v => /^(fixed|auto)$/.test(v),
     };
     const RTE_DEFAULTS = {          // 표는 서식이 빠져도 항상 선이 보이게 기본 모양을 채워 줌
-      TABLE: { 'border-collapse': 'collapse', 'width': '100%' },
+      TABLE: { 'border-collapse': 'collapse', 'width': '100%', 'table-layout': 'fixed' },
       TD: { 'border': '1px solid #94a3b8', 'padding': '4px 8px', 'vertical-align': 'top' },
       TH: { 'border': '1px solid #94a3b8', 'padding': '4px 8px', 'vertical-align': 'top', 'background-color': '#f1f5f9', 'font-weight': 'bold', 'text-align': 'left' },
     };
@@ -2846,7 +2849,7 @@
       if (!sel || !sel.rangeCount) return;
       const r = sel.getRangeAt(0), c = r.commonAncestorContainer, body = (c.nodeType === 1 ? c : c.parentElement) && (c.nodeType === 1 ? c : c.parentElement).closest('.rte-body');
       if (body) rteSaved = { body, range: r.cloneRange() };
-      document.querySelectorAll('.rte-wrap').forEach(w => { const bar = w.querySelector('.rte-tbl'); if (bar) bar.classList.toggle('hidden', !currentCell(w.querySelector('.rte-body'))); });
+      document.querySelectorAll('.rte-wrap').forEach(w => { const bar = w.querySelector('.rte-tbl'), bd = w.querySelector('.rte-body'), c = currentCell(bd); if (c) bd._cell = c; if (bar) bar.classList.toggle('hidden', !c); });
     });
     function rteRestore(body) {
       const sel = window.getSelection();
@@ -2900,7 +2903,7 @@
           ${btn('clear', '서식 지우기', '선택한 글자의 서식 지우기')}
           <input type="file" accept="image/*" multiple data-cmd="img-file" class="hidden">
         </div>
-        <div class="rte-tbl hidden flex flex-wrap items-center gap-1 px-2 py-1 border-b border-slate-200 bg-slate-50 text-[11px] text-slate-600"><span class="font-semibold mr-1">표</span>${tb('row+', '행 추가')}${tb('col+', '열 추가')}${tb('row-', '행 삭제')}${tb('col-', '열 삭제')}${tb('tbl-', '표 삭제')}</div>
+        <div class="rte-tbl hidden flex flex-wrap items-center gap-1 px-2 py-1 border-b border-slate-200 bg-slate-50 text-[11px] text-slate-600"><span class="font-semibold mr-1">표</span>${tb('row+', '행 추가')}${tb('col+', '열 추가')}${tb('row-', '행 삭제')}${tb('col-', '열 삭제')}${tb('eq', '열 너비 균등')}${tb('tbl-', '표 삭제')}</div>
         <div class="rte-pop hidden absolute z-20 bg-white border border-slate-200 rounded-xl shadow-xl p-3 space-y-2 text-xs text-slate-600" style="left:8px;top:44px">
           <div class="flex items-center gap-2">행 <input type="number" data-tbl-rows min="1" max="30" value="3" class="w-14 border border-slate-200 rounded-md px-1.5 py-1"> 열 <input type="number" data-tbl-cols min="1" max="10" value="3" class="w-14 border border-slate-200 rounded-md px-1.5 py-1"></div>
           <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" data-tbl-head checked> 첫 줄을 제목으로</label>
@@ -2955,6 +2958,16 @@
         if (files.length) { files.forEach(f => insertImageFile(body, f)); return; }
         const html = e.clipboardData.getData('text/html'), text = e.clipboardData.getData('text/plain');
         document.execCommand('insertHTML', false, html ? sanitizeRich(html) : plainToHtml(text));
+      });
+      body.addEventListener('pointermove', e => {                         // 표의 칸 선 위에서는 커서가 크기 조절 모양으로 바뀜
+        if (e.buttons) return;
+        const b = tableBorderAt(body, e);
+        body.style.cursor = b ? (b.type === 'col' ? 'col-resize' : 'row-resize') : '';
+      });
+      body.addEventListener('pointerdown', e => {
+        if (e.button !== undefined && e.button !== 0) return;
+        const b = tableBorderAt(body, e);
+        if (b) { e.preventDefault(); body._cell = b.cell; startTableResize(body, b, e); }
       });
       body.addEventListener('keydown', e => {                             // 표 안에서 Tab / Shift+Tab 으로 칸 이동 (마지막 칸에서 Tab 하면 행이 추가됨)
         if (e.key !== 'Tab' || e.isComposing) return;
@@ -3087,7 +3100,7 @@
     const TD_STYLE = 'border: 1px solid #94a3b8; padding: 4px 8px; vertical-align: top';
     const TH_STYLE = TD_STYLE + '; background-color: #f1f5f9; font-weight: bold; text-align: left';
     function tableHtml(rows, cols, header) {
-      let h = '<table data-new="1" style="border-collapse: collapse; width: 100%"><tbody>';
+      let h = '<table data-new="1" style="border-collapse: collapse; width: 100%; table-layout: fixed"><tbody>';
       for (let r = 0; r < rows; r++) {
         h += '<tr>';
         for (let c = 0; c < cols; c++) h += (header && r === 0) ? `<th style="${TH_STYLE}"><br></th>` : `<td style="${TD_STYLE}"><br></td>`;
@@ -3107,6 +3120,50 @@
       }
       body.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    // 모든 열 너비를 같게 (열을 더하거나 뺄 때, 또는 '열 너비 균등' 버튼)
+    function equalizeColumns(table) {
+      if (!table || !table.isConnected) return;
+      const n = table.rows[0] ? table.rows[0].children.length : 0;
+      if (!n) return;
+      table.style.tableLayout = 'fixed';
+      [...table.rows].forEach(r => [...r.children].forEach(c => { c.style.width = (100 / n).toFixed(2) + '%'; }));
+    }
+    // 표 크기 조절: 칸 사이의 세로선을 끌면 열 너비, 칸 아래 가로선을 끌면 행 높이가 바뀜
+    function tableBorderAt(body, e) {
+      const cell = e.target.closest && e.target.closest('td, th');
+      if (!cell || !body.contains(cell)) return null;
+      const r = cell.getBoundingClientRect(), E = 5;
+      if (cell.nextElementSibling && r.right - e.clientX <= E) return { type: 'col', cell };
+      if (cell.previousElementSibling && e.clientX - r.left <= E) return { type: 'col', cell: cell.previousElementSibling };
+      if (r.bottom - e.clientY <= E) return { type: 'row', cell };
+      return null;
+    }
+    function startTableResize(body, b, e) {
+      const table = b.cell.closest('table'), row = b.cell.parentElement, idx = [...row.children].indexOf(b.cell);
+      const x0 = e.clientX, y0 = e.clientY;
+      const widths = [...table.rows[0].children].map(c => c.getBoundingClientRect().width), total = widths.reduce((a, c) => a + c, 0) || 1;
+      const h0 = row.getBoundingClientRect().height;
+      table.style.tableLayout = 'fixed'; table.style.width = '100%';
+      const prevSel = document.body.style.userSelect; document.body.style.userSelect = 'none';
+      const move = ev => {
+        if (b.type === 'col') {
+          const pair = widths[idx] + widths[idx + 1], a = Math.max(32, Math.min(widths[idx] + ev.clientX - x0, pair - 32));
+          const w = widths.slice(); w[idx] = a; w[idx + 1] = pair - a;
+          [...table.rows].forEach(r => [...r.children].forEach((c, j) => { if (w[j] !== undefined) c.style.width = (w[j] / total * 100).toFixed(2) + '%'; }));
+        } else {
+          const h = Math.max(24, Math.round(h0 + ev.clientY - y0));
+          [...row.children].forEach(c => { c.style.height = h + 'px'; });
+        }
+        ev.preventDefault();
+      };
+      const up = () => {
+        document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+        document.body.style.userSelect = prevSel;
+        body.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    }
     function focusCell(c) {
       if (!c) return;
       const sel = window.getSelection(), r = document.createRange();
@@ -3120,7 +3177,7 @@
     }
     function rteTableOp(body, op) {
       rteRestore(body);
-      const cell = currentCell(body);
+      const cell = currentCell(body) || (body._cell && body.contains(body._cell) ? body._cell : null);   // 커서가 표 밖이어도 마지막으로 다룬 칸 기준
       if (!cell) return;
       const tr = cell.parentElement, table = cell.closest('table'), idx = [...tr.children].indexOf(cell);
       const mk = (tag) => { const c = document.createElement(tag); c.setAttribute('style', tag === 'th' ? TH_STYLE : TD_STYLE); c.innerHTML = '<br>'; return c; };
@@ -3135,6 +3192,8 @@
         if (near) { [...table.rows].forEach(row => { if (row.children[idx]) row.children[idx].remove(); }); focusCell(near); } else table.remove();
       }
       else if (op === 'tbl-') table.remove();
+      else if (op === 'eq') equalizeColumns(table);
+      if (op === 'col+' || op === 'col-') equalizeColumns(table);
       body.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
@@ -4857,6 +4916,7 @@
       .snum { display: inline-block; min-width: 16px; color: #64748b; }
       .step img, .note img { max-width: 100%; height: auto; display: block; margin: 4px 0; }
       .step-table { margin: 4px 0 4px 18px; }
+      td, th { overflow-wrap: anywhere; }
       .tag { font-size: 7.5pt; border: 1px solid #ef4444; color: #ef4444; padding: 0 4px; border-radius: 3px; margin-left: 6px; }
       .cat { font-size: 8pt; font-weight: normal; color: #64748b; margin-left: 6px; }
       .note { background: #fffbeb; border: 1px solid #fcd34d; padding: 6px 9px; border-radius: 6px; font-size: 9.5pt; white-space: pre-line; margin-bottom: 8px; }
