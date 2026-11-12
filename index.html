@@ -92,11 +92,14 @@
     }
     body.sidebar-open { overflow: hidden; }
 
+    @media (min-width: 768px) { body.sidebar-collapsed #appSidebar { display: none; } body.sidebar-collapsed #sidebarReopenBtn { display: flex; } }
+    #sidebarReopenBtn { display: none; }
     .rte-wrap { position: relative; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
     .rte-body img { max-width: 100%; height: auto; cursor: pointer; border-radius: 6px; }
     .rte-view img { max-width: 100%; height: auto; cursor: zoom-in; border-radius: 6px; }
     .rte-body table, .rte-view table { margin: 6px 0; }
     .rte-body td, .rte-body th, .rte-view td, .rte-view th { overflow-wrap: anywhere; }
+    .rte-body .rte-cellsel { background-color: #dbeafe !important; outline: 1px solid #60a5fa; }
     .rte-wrap:focus-within { box-shadow: 0 0 0 2px #94a3b8; }
     .rte-body { max-height: 320px; overflow-y: auto; padding: 10px 14px; font-size: 14px; line-height: 1.6; outline: none; word-break: break-word; }
     .rte-body:empty::before { content: attr(data-placeholder); color: #94a3b8; pointer-events: none; }
@@ -123,6 +126,7 @@
           <h1 class="text-base font-black tracking-wider text-slate-800">✨🐥🍀</h1>
           <p class="text-[11px] text-slate-500 mt-0.5">통합 스케줄러 & To do list</p>
         </div>
+        <button onclick="toggleSidebarDesktop()" title="메뉴 접기" class="hidden md:flex w-8 h-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="메뉴 접기"><i class="fa-solid fa-angles-left"></i></button>
         <button onclick="closeSidebar()" class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="메뉴 닫기"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
@@ -204,6 +208,8 @@
   </aside>
 
   <!-- 모바일 메뉴 배경 -->
+  <button id="sidebarReopenBtn" onclick="toggleSidebarDesktop()" title="메뉴 펼치기" class="fixed top-3 left-3 z-40 w-9 h-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50" aria-label="메뉴 펼치기"><i class="fa-solid fa-bars"></i></button>
+
   <div id="sidebarOverlay" onclick="closeSidebar()" class="fixed inset-0 bg-slate-900/40 z-40 hidden md:hidden"></div>
 
   <!-- 메인 컨텐츠 영역 -->
@@ -466,6 +472,9 @@
 
         <!-- 프로토콜 보드: 보드(큰 카테고리) > 카테고리 열(작은 카테고리) > 프로토콜 카드 -->
         <div class="flex justify-end items-center gap-2">
+          <button onclick="openProtocolPrintModal()" class="text-xs bg-white hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 border border-slate-200 shadow-2xs">
+            <i class="fa-solid fa-print"></i> 프로토콜 인쇄
+          </button>
           <button onclick="openBoardModal()" class="text-xs bg-white hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 border border-slate-200 shadow-2xs">
             <i class="fa-solid fa-plus"></i> 새 보드
           </button>
@@ -819,9 +828,9 @@
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-regular fa-clock mr-1"></i>시작 시간</label>
             <div class="flex gap-1.5">
-              <select id="schedStartHour" onchange="fixEndTime()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
+              <select id="schedStartHour" onchange="onStartTimeChange()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
               <span class="self-center font-bold">:</span>
-              <select id="schedStartMin" onchange="fixEndTime()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
+              <select id="schedStartMin" onchange="onStartTimeChange()" class="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none font-bold"></select>
             </div>
           </div>
           <div>
@@ -1053,6 +1062,9 @@
           <i class="fa-solid fa-trash mr-1"></i> 삭제
         </button>
         <div class="flex gap-2">
+          <button onclick="openProtocolPrintModal([document.getElementById('activeProtocolDetailId').value])" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+            <i class="fa-solid fa-print mr-1"></i> 인쇄
+          </button>
           <button onclick="handleEditProtocolFromDetail()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
             수정
           </button>
@@ -1374,6 +1386,28 @@
     </form>
   </div>
 
+  <div id="protocolPrintModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-4 md:p-6 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-print text-slate-500 mr-1.5"></i>프로토콜 인쇄</h3>
+        <button onclick="closeProtocolPrintModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1.5"><label class="text-xs font-bold text-slate-600">인쇄할 프로토콜</label>
+          <span class="text-[11px]"><button type="button" onclick="ppSelectAll(true)" class="text-slate-500 hover:text-slate-800 underline">모두 선택</button> · <button type="button" onclick="ppSelectAll(false)" class="text-slate-500 hover:text-slate-800 underline">모두 해제</button></span></div>
+        <div id="ppList" class="bg-[#f8fafc] border border-slate-200 rounded-xl p-2.5 max-h-60 overflow-y-auto text-xs text-slate-700"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label for="ppFont" class="block text-xs font-bold text-slate-600 mb-1">글꼴</label><select id="ppFont" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-slate-300"></select></div>
+        <div><label for="ppScale" class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1"><span>글씨 크기</span><span id="ppScaleLabel">100%</span></label><input type="range" id="ppScale" min="70" max="200" step="5" value="100" oninput="document.getElementById('ppScaleLabel').textContent = this.value + '%'" class="w-full mt-2"></div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+        <button onclick="closeProtocolPrintModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">취소</button>
+        <button onclick="doPrintProtocols()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition"><i class="fa-solid fa-print mr-1"></i>인쇄</button>
+      </div>
+    </div>
+  </div>
+
   <div id="quickAddModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-start md:items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-4 md:p-6 shadow-2xl space-y-3 mt-16 md:mt-0">
       <div class="flex justify-between items-center border-b border-slate-200 pb-3">
@@ -1660,6 +1694,15 @@
 
       renderAll();
     }
+
+    // PC에서 왼쪽 메뉴 접기/펼치기 (선택은 이 기기에 기억)
+    function toggleSidebarDesktop() {
+      const on = document.body.classList.toggle('sidebar-collapsed');
+      try { localStorage.setItem('app_sidebar_collapsed', on ? '1' : '0'); } catch (e) {}
+    }
+    try { if (localStorage.getItem('app_sidebar_collapsed') === '1') document.body.classList.add('sidebar-collapsed'); } catch (e) {}
+
+    { const _switchTab = switchTab; switchTab = function (id) { _switchTab(id); if (id === 'protocol') setTimeout(scrollToLastProtoBoard, 0); }; }   // 프로토콜 탭을 열면 마지막으로 본 보드 위치로
 
     function openSidebar() {
       document.getElementById('appSidebar').classList.remove('-translate-x-full');
@@ -2556,7 +2599,7 @@
     //  - 'card': Weekly To Do List 카드 (다른 날/오전·오후로 옮기기는 카드 자체를 끌기)
     //  - 'sub' : 카드 안의 세부 계획,  'row': 일정 등록·수정 창의 세부 항목 입력칸
     let reorder = null;
-    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row', print: '.print-plan-row', proto: '[data-proto-id]' };
+    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row', print: '.print-plan-row', proto: '[data-proto-id]', board: '[data-board-sec]' };
     function startReorder(e, handle, kind = 'card') {
       if (e.button !== undefined && e.button !== 0) return;
       const sel = REORDER_SEL[kind], item = handle.closest(sel);
@@ -2603,6 +2646,11 @@
       if (host) host.draggable = true;
       item.style.opacity = ''; item.style.outline = '';
       const now = [...list.children];
+      if (kind === 'board') {                                           // 보드 순서: 카테고리마다 boardOrder 저장 (동기화됨)
+        if (now.every((c, i) => c === before[i])) return;
+        now.map(c => c.dataset.boardSec).forEach((name, i) => { state.categories.forEach(c => { if (boardOf(c) === name) c.boardOrder = i; }); });
+        saveLocalStorage(); renderAll(); return;
+      }
       if (kind === 'proto') {                                           // 프로토콜: 바뀐 열(들)의 순서와 카테고리를 저장
         const dest = item.parentElement;
         if (dest === list && now.every((c, i) => c === before[i])) return;
@@ -2849,7 +2897,7 @@
       if (!sel || !sel.rangeCount) return;
       const r = sel.getRangeAt(0), c = r.commonAncestorContainer, body = (c.nodeType === 1 ? c : c.parentElement) && (c.nodeType === 1 ? c : c.parentElement).closest('.rte-body');
       if (body) rteSaved = { body, range: r.cloneRange() };
-      document.querySelectorAll('.rte-wrap').forEach(w => { const bar = w.querySelector('.rte-tbl'), bd = w.querySelector('.rte-body'), c = currentCell(bd); if (c) bd._cell = c; if (bar) bar.classList.toggle('hidden', !c); });
+      document.querySelectorAll('.rte-wrap').forEach(w => { const bar = w.querySelector('.rte-tbl'), bd = w.querySelector('.rte-body'), c = currentCell(bd); if (c) bd._cell = c; if (bar) bar.classList.toggle('hidden', !(c || (bd._sel && bd.contains(bd._sel.table)))); });
     });
     function rteRestore(body) {
       const sel = window.getSelection();
@@ -2903,7 +2951,7 @@
           ${btn('clear', '서식 지우기', '선택한 글자의 서식 지우기')}
           <input type="file" accept="image/*" multiple data-cmd="img-file" class="hidden">
         </div>
-        <div class="rte-tbl hidden flex flex-wrap items-center gap-1 px-2 py-1 border-b border-slate-200 bg-slate-50 text-[11px] text-slate-600"><span class="font-semibold mr-1">표</span>${tb('row+', '행 추가')}${tb('col+', '열 추가')}${tb('row-', '행 삭제')}${tb('col-', '열 삭제')}${tb('eq', '열 너비 균등')}${tb('tbl-', '표 삭제')}</div>
+        <div class="rte-tbl hidden flex flex-wrap items-center gap-1 px-2 py-1 border-b border-slate-200 bg-slate-50 text-[11px] text-slate-600"><span class="font-semibold mr-1" title="칸을 드래그하면 여러 칸이 선택돼요">표</span>${tb('row+', '행 추가')}${tb('col+', '열 추가')}${tb('row-', '행 삭제')}${tb('col-', '열 삭제')}<span class="text-slate-300">|</span>${tb('selrow', '행 선택')}${tb('selcol', '열 선택')}${tb('eqrows', '선택 행 높이 같게')}${tb('eqcols', '선택 열 너비 같게')}<span class="text-slate-300">|</span>${tb('eq', '전체 열 균등')}${tb('tbl-', '표 삭제')}</div>
         <div class="rte-pop hidden absolute z-20 bg-white border border-slate-200 rounded-xl shadow-xl p-3 space-y-2 text-xs text-slate-600" style="left:8px;top:44px">
           <div class="flex items-center gap-2">행 <input type="number" data-tbl-rows min="1" max="30" value="3" class="w-14 border border-slate-200 rounded-md px-1.5 py-1"> 열 <input type="number" data-tbl-cols min="1" max="10" value="3" class="w-14 border border-slate-200 rounded-md px-1.5 py-1"></div>
           <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" data-tbl-head checked> 첫 줄을 제목으로</label>
@@ -2959,17 +3007,39 @@
         const html = e.clipboardData.getData('text/html'), text = e.clipboardData.getData('text/plain');
         document.execCommand('insertHTML', false, html ? sanitizeRich(html) : plainToHtml(text));
       });
-      body.addEventListener('pointermove', e => {                         // 표의 칸 선 위에서는 커서가 크기 조절 모양으로 바뀜
+      body.addEventListener('pointermove', e => {                         // 표의 선·모서리 위에서는 커서가 크기 조절 모양으로 바뀜
         if (e.buttons) return;
-        const b = tableBorderAt(body, e);
-        body.style.cursor = b ? (b.type === 'col' ? 'col-resize' : 'row-resize') : '';
+        const bd = tableBorderAt(body, e);
+        body.style.cursor = bd ? (bd.type === 'table' ? 'nwse-resize' : bd.type === 'col' ? 'col-resize' : 'row-resize') : '';
       });
       body.addEventListener('pointerdown', e => {
         if (e.button !== undefined && e.button !== 0) return;
-        const b = tableBorderAt(body, e);
-        if (b) { e.preventDefault(); body._cell = b.cell; startTableResize(body, b, e); }
+        const bd = tableBorderAt(body, e);
+        if (bd) { e.preventDefault(); body._cell = bd.cell || null; clearCellSel(body); startTableResize(body, bd, e); return; }
+        clearCellSel(body);
+        const start = e.target.closest && e.target.closest('td, th');
+        if (!start || !body.contains(start)) return;
+        const table = start.closest('table'); let active = false;                    // 칸에서 시작해 다른 칸으로 끌면 칸 범위 선택 (같은 칸 안에서 끌면 글자 선택)
+        const posOf = c => [[...table.rows].indexOf(c.parentElement), [...c.parentElement.children].indexOf(c)];
+        const move = ev => {
+          const el = document.elementFromPoint(ev.clientX, ev.clientY), c = el && el.closest && el.closest('td, th');
+          if (!c || c.closest('table') !== table) return;
+          if (!active) { if (c === start) return; active = true; document.body.style.userSelect = 'none'; }
+          ev.preventDefault(); window.getSelection().removeAllRanges();
+          const [r1, c1] = posOf(start), [r2, c2] = posOf(c);
+          setCellSel(body, table, r1, c1, r2, c2);
+        };
+        const up = () => {
+          document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+          document.body.style.userSelect = '';
+          if (active) body._cell = start;
+        };
+        document.addEventListener('pointermove', move, { passive: false }); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
       });
       body.addEventListener('keydown', e => {                             // 표 안에서 Tab / Shift+Tab 으로 칸 이동 (마지막 칸에서 Tab 하면 행이 추가됨)
+        if (body._sel && (e.key === 'Delete' || e.key === 'Backspace') && !e.isComposing) {      // 선택한 칸들의 내용을 비움
+          e.preventDefault(); selectedCells(body).forEach(c => { c.innerHTML = '<br>'; }); body.dispatchEvent(new Event('input', { bubbles: true })); return;
+        }
         if (e.key !== 'Tab' || e.isComposing) return;
         const cell = currentCell(body);
         if (!cell) return;
@@ -3128,8 +3198,19 @@
       table.style.tableLayout = 'fixed';
       [...table.rows].forEach(r => [...r.children].forEach(c => { c.style.width = (100 / n).toFixed(2) + '%'; }));
     }
-    // 표 크기 조절: 칸 사이의 세로선을 끌면 열 너비, 칸 아래 가로선을 끌면 행 높이가 바뀜
+    // 행 높이 설정: 칸 여백·선 두께를 빼고 보이는 행 높이가 정확히 target이 되도록 보정
+    function setRowHeight(row, target) {
+      const cells = [...row.children];
+      cells.forEach(c => { c.style.height = target + 'px'; });
+      const diff = row.getBoundingClientRect().height - target;
+      if (Math.abs(diff) > 0.5) cells.forEach(c => { c.style.height = Math.max(0, Math.round(target - diff)) + 'px'; });
+    }
+    // 표 크기 조절: 칸 사이의 세로선 = 열 너비, 칸 아래 가로선 = 행 높이, 표 오른쪽 아래 모서리 = 표 전체 크기
     function tableBorderAt(body, e) {
+      for (const t of body.querySelectorAll('table')) {                                    // 표 전체: 오른쪽 아래 모서리
+        const tr = t.getBoundingClientRect();
+        if (Math.abs(e.clientX - tr.right) <= 8 && Math.abs(e.clientY - tr.bottom) <= 8) return { type: 'table', table: t };
+      }
       const cell = e.target.closest && e.target.closest('td, th');
       if (!cell || !body.contains(cell)) return null;
       const r = cell.getBoundingClientRect(), E = 5;
@@ -3139,23 +3220,35 @@
       return null;
     }
     function startTableResize(body, b, e) {
-      const table = b.cell.closest('table'), row = b.cell.parentElement, idx = [...row.children].indexOf(b.cell);
       const x0 = e.clientX, y0 = e.clientY;
-      const widths = [...table.rows[0].children].map(c => c.getBoundingClientRect().width), total = widths.reduce((a, c) => a + c, 0) || 1;
-      const h0 = row.getBoundingClientRect().height;
-      table.style.tableLayout = 'fixed'; table.style.width = '100%';
       const prevSel = document.body.style.userSelect; document.body.style.userSelect = 'none';
-      const move = ev => {
-        if (b.type === 'col') {
-          const pair = widths[idx] + widths[idx + 1], a = Math.max(32, Math.min(widths[idx] + ev.clientX - x0, pair - 32));
-          const w = widths.slice(); w[idx] = a; w[idx + 1] = pair - a;
-          [...table.rows].forEach(r => [...r.children].forEach((c, j) => { if (w[j] !== undefined) c.style.width = (w[j] / total * 100).toFixed(2) + '%'; }));
-        } else {
-          const h = Math.max(24, Math.round(h0 + ev.clientY - y0));
-          [...row.children].forEach(c => { c.style.height = h + 'px'; });
-        }
-        ev.preventDefault();
-      };
+      let move;
+      if (b.type === 'table') {
+        const table = b.table, rect0 = table.getBoundingClientRect(), W0 = rect0.width, H0 = rect0.height;
+        const pct0 = parseFloat(table.style.width) || 100, rows = [...table.rows], rowH0 = rows.map(r => r.getBoundingClientRect().height);
+        table.style.tableLayout = 'fixed';
+        move = ev => {
+          table.style.width = Math.max(20, Math.min(100, pct0 * Math.max(120, W0 + ev.clientX - x0) / W0)).toFixed(1) + '%';       // 가로: 표 너비(%)
+          const f = Math.max(0.3, (H0 + ev.clientY - y0) / H0);                                                                    // 세로: 모든 행 높이를 같은 비율로
+          rows.forEach((r, i) => setRowHeight(r, Math.max(24, Math.round(rowH0[i] * f))));
+          ev.preventDefault();
+        };
+      } else {
+        const table = b.cell.closest('table'), row = b.cell.parentElement, idx = [...row.children].indexOf(b.cell);
+        const widths = [...table.rows[0].children].map(c => c.getBoundingClientRect().width), total = widths.reduce((a, c) => a + c, 0) || 1;
+        const h0 = row.getBoundingClientRect().height;
+        table.style.tableLayout = 'fixed';
+        move = ev => {
+          if (b.type === 'col') {
+            const pair = widths[idx] + widths[idx + 1], a = Math.max(32, Math.min(widths[idx] + ev.clientX - x0, pair - 32));
+            const w = widths.slice(); w[idx] = a; w[idx + 1] = pair - a;
+            [...table.rows].forEach(r => [...r.children].forEach((c, j) => { if (w[j] !== undefined) c.style.width = (w[j] / total * 100).toFixed(2) + '%'; }));
+          } else {
+            setRowHeight(row, Math.max(24, Math.round(h0 + ev.clientY - y0)));
+          }
+          ev.preventDefault();
+        };
+      }
       const up = () => {
         document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
         document.body.style.userSelect = prevSel;
@@ -3163,6 +3256,28 @@
       };
       document.addEventListener('pointermove', move, { passive: false });
       document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    }
+    // ── 칸 범위 선택 (드래그, '행 선택'·'열 선택' 버튼) ──
+    function applyCellSel(body) {
+      body.querySelectorAll('.rte-cellsel').forEach(c => c.classList.remove('rte-cellsel'));
+      const s = body._sel;
+      if (s && body.contains(s.table)) for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++) { const cell = s.table.rows[r] && s.table.rows[r].children[c]; if (cell) cell.classList.add('rte-cellsel'); }
+      const bar = body.closest('.rte-wrap').querySelector('.rte-tbl');
+      if (bar) bar.classList.toggle('hidden', !(s || currentCell(body)));
+    }
+    function setCellSel(body, table, r1, c1, r2, c2) { body._sel = { table, r1: Math.min(r1, r2), c1: Math.min(c1, c2), r2: Math.max(r1, r2), c2: Math.max(c1, c2) }; applyCellSel(body); }
+    function clearCellSel(body) { if (body._sel) { body._sel = null; applyCellSel(body); } }
+    function selectedCells(body) { return [...body.querySelectorAll('.rte-cellsel')]; }
+    function equalizeRows(table, a, z) {                                            // 선택한 행들만 같은 높이(평균)로
+      const rows = [...table.rows].slice(a, z + 1), avg = Math.max(24, Math.round(rows.reduce((t, r) => t + r.getBoundingClientRect().height, 0) / rows.length));
+      rows.forEach(r => setRowHeight(r, avg));
+    }
+    function equalizeSelCols(table, a, z) {                                         // 선택한 열들만 같은 너비(평균)로 (다른 열은 그대로)
+      const w = [...table.rows[0].children].map(c => c.getBoundingClientRect().width), total = w.reduce((t, x) => t + x, 0) || 1;
+      let sum = 0; for (let j = a; j <= z; j++) sum += w[j];
+      for (let j = a; j <= z; j++) w[j] = sum / (z - a + 1);
+      table.style.tableLayout = 'fixed';
+      [...table.rows].forEach(r => [...r.children].forEach((c, j) => { if (w[j] !== undefined) c.style.width = (w[j] / total * 100).toFixed(2) + '%'; }));
     }
     function focusCell(c) {
       if (!c) return;
@@ -3177,21 +3292,31 @@
     }
     function rteTableOp(body, op) {
       rteRestore(body);
-      const cell = currentCell(body) || (body._cell && body.contains(body._cell) ? body._cell : null);   // 커서가 표 밖이어도 마지막으로 다룬 칸 기준
+      const sel0 = body._sel && body.contains(body._sel.table) ? body._sel : null;
+      const cell = currentCell(body) || (body._cell && body.contains(body._cell) ? body._cell : null) || (sel0 && sel0.table.rows[sel0.r1] ? sel0.table.rows[sel0.r1].children[sel0.c1] : null);
       if (!cell) return;
-      const tr = cell.parentElement, table = cell.closest('table'), idx = [...tr.children].indexOf(cell);
+      const tr = cell.parentElement, table = cell.closest('table'), idx = [...tr.children].indexOf(cell), ridx = [...table.rows].indexOf(tr);
+      const sel = sel0 && sel0.table === table ? sel0 : null, nRows = table.rows.length, nCols = tr.children.length;
       const mk = (tag) => { const c = document.createElement(tag); c.setAttribute('style', tag === 'th' ? TH_STYLE : TD_STYLE); c.innerHTML = '<br>'; return c; };
       if (op === 'row+') { const nr = document.createElement('tr'); [...tr.children].forEach(() => nr.appendChild(mk('td'))); tr.after(nr); }
       else if (op === 'col+') { [...table.rows].forEach(row => { const ref = row.children[idx]; if (ref) ref.after(mk(ref.tagName.toLowerCase())); }); }
-      else if (op === 'row-') {
-        const near = tr.nextElementSibling || tr.previousElementSibling;
-        if (near) { tr.remove(); focusCell(near.children[Math.min(idx, near.children.length - 1)]); } else table.remove();
+      else if (op === 'row-') {                                                           // 선택한 행(들) 또는 현재 행 삭제
+        const a = sel ? sel.r1 : ridx, z = sel ? sel.r2 : ridx;
+        if (z - a + 1 >= nRows) table.remove();
+        else { const near = table.rows[z + 1] || table.rows[a - 1], c = near.children[Math.min(idx, near.children.length - 1)]; for (let i = z; i >= a; i--) table.rows[i].remove(); focusCell(c); }
+        clearCellSel(body);
       }
-      else if (op === 'col-') {
-        const near = cell.nextElementSibling || cell.previousElementSibling;
-        if (near) { [...table.rows].forEach(row => { if (row.children[idx]) row.children[idx].remove(); }); focusCell(near); } else table.remove();
+      else if (op === 'col-') {                                                           // 선택한 열(들) 또는 현재 열 삭제
+        const a = sel ? sel.c1 : idx, z = sel ? sel.c2 : idx;
+        if (z - a + 1 >= nCols) table.remove();
+        else { const near = tr.children[z + 1] || tr.children[a - 1]; for (let j = z; j >= a; j--) [...table.rows].forEach(row => { if (row.children[j]) row.children[j].remove(); }); focusCell(near); }
+        clearCellSel(body);
       }
-      else if (op === 'tbl-') table.remove();
+      else if (op === 'selrow') setCellSel(body, table, ridx, 0, ridx, nCols - 1);
+      else if (op === 'selcol') setCellSel(body, table, 0, idx, nRows - 1, idx);
+      else if (op === 'eqrows') { if (!sel || sel.r1 === sel.r2) { uiAlert('높이를 같게 맞출 행을 2개 이상 드래그해서 선택해 주세요.'); return; } equalizeRows(table, sel.r1, sel.r2); }
+      else if (op === 'eqcols') { if (!sel || sel.c1 === sel.c2) { uiAlert('너비를 같게 맞출 열을 2개 이상 드래그해서 선택해 주세요.'); return; } equalizeSelCols(table, sel.c1, sel.c2); }
+      else if (op === 'tbl-') { table.remove(); clearCellSel(body); }
       else if (op === 'eq') equalizeColumns(table);
       if (op === 'col+' || op === 'col-') equalizeColumns(table);
       body.dispatchEvent(new Event('input', { bubbles: true }));
@@ -3291,7 +3416,13 @@
     const boardOf = c => c.board || DEFAULT_BOARD;
     const catByKey = k => state.categories.find(c => catKey(c) === k);
     const catName = k => { const c = catByKey(k); return c ? c.name : k; };
-    const getBoards = () => [...new Set(state.categories.map(boardOf))];
+    // 보드 순서: 카테고리의 boardOrder(드래그로 정한 순서)가 있으면 그 순서, 없으면 만든 순서
+    const getBoards = () => {
+      const seen = new Map();
+      state.categories.forEach((c, i) => { const b = boardOf(c), o = c.boardOrder ?? 1e6, cur = seen.get(b); if (!cur) seen.set(b, { b, o, i }); else cur.o = Math.min(cur.o, o); });
+      return [...seen.values()].sort((x, y) => x.o - y.o || x.i - y.i).map(x => x.b);
+    };
+    const boardProtocolIds = board => { const keys = new Set(state.categories.filter(c => boardOf(c) === board).map(catKey)); return state.protocols.filter(p => keys.has(p.category)).map(p => p.id); };
     const tint = hex => /^#[0-9a-fA-F]{6}$/.test(hex) ? hex + '33' : '#f1f5f9';
     const newCatId = () => 'cat_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
@@ -3320,9 +3451,21 @@
         </div>`;
     }
 
+    let lastProtoBoard = '';
+    try { lastProtoBoard = localStorage.getItem('app_last_proto_board') || ''; } catch (e) {}
+    function rememberBoard(name) { lastProtoBoard = name || ''; try { localStorage.setItem('app_last_proto_board', lastProtoBoard); } catch (e) {} }
+    function scrollToLastProtoBoard() {
+      const root = document.getElementById('protocolBoardsContainer');
+      if (!root || !lastProtoBoard) return;
+      const sec = [...root.querySelectorAll('[data-board-sec]')].find(x => x.dataset.boardSec === lastProtoBoard);
+      if (sec) { sec.style.scrollMarginTop = '12px'; sec.scrollIntoView({ block: 'start' }); }
+    }
     function renderProtocolList() {
       const root = document.getElementById('protocolBoardsContainer');
       if (!root) return;
+      const mainEl = document.querySelector('main'), keepTop = mainEl ? mainEl.scrollTop : 0, keepY = window.scrollY;     // 다시 그려도 보던 위치(세로·가로)를 그대로 유지
+      const keepLeft = {}; root.querySelectorAll('[data-board-scroll]').forEach(el => { keepLeft[el.dataset.boardScroll] = el.scrollLeft; });
+      root.style.minHeight = root.offsetHeight + 'px';
       root.innerHTML = '';
       const boards = getBoards();
       if (!boards.length) {
@@ -3334,22 +3477,34 @@
         const total = state.protocols.filter(p => cats.some(c => catKey(c) === p.category)).length;
         const sec = document.createElement('div');
         sec.className = 'space-y-3';
+        sec.dataset.boardSec = board;
         sec.innerHTML = `
           <div class="flex items-center justify-between gap-2">
-            <h4 class="text-base font-black text-slate-800 tracking-tight min-w-0 break-words">${escapeHtml(board)} <span class="text-xs font-semibold text-slate-400 ml-1">${total}</span></h4>
-            <button data-board="${escapeHtml(board)}" onclick="openBoardModal(this.dataset.board)" title="보드 이름 변경·삭제" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"><i class="fa-solid fa-pen text-xs"></i></button>
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span onpointerdown="startReorder(event, this, 'board')" title="끌어서 보드 순서 바꾸기" class="text-slate-300 hover:text-slate-500 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:14px;min-height:22px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-xs"></i></span>
+              <h4 class="text-base font-black text-slate-800 tracking-tight min-w-0 break-words">${escapeHtml(board)} <span class="text-xs font-semibold text-slate-400 ml-1">${total}</span></h4>
+            </div>
+            <div class="flex items-center flex-shrink-0">
+              <button data-board="${escapeHtml(board)}" onclick="openProtocolPrintModal(boardProtocolIds(this.dataset.board))" title="이 보드 프로토콜 인쇄" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"><i class="fa-solid fa-print text-xs"></i></button>
+              <button data-board="${escapeHtml(board)}" onclick="openBoardModal(this.dataset.board)" title="보드 이름 변경·삭제" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"><i class="fa-solid fa-pen text-xs"></i></button>
+            </div>
           </div>
-          <div class="flex gap-3 overflow-x-auto pb-3 items-start">
+          <div data-board-scroll="${escapeHtml(board)}" class="flex gap-3 overflow-x-auto pb-3 items-start">
             ${cats.map(protocolColumnHtml).join('')}
             <button data-board="${escapeHtml(board)}" onclick="openCategoryEditModal(null, this.dataset.board)" class="flex-shrink-0 w-[200px] text-left text-xs font-semibold text-slate-400 hover:text-slate-700 border border-dashed border-slate-300 hover:bg-slate-50 rounded-2xl px-3 py-3 transition">+ 새 카테고리</button>
           </div>`;
         root.appendChild(sec);
       });
+      root.querySelectorAll('[data-board-scroll]').forEach(el => { if (keepLeft[el.dataset.boardScroll]) el.scrollLeft = keepLeft[el.dataset.boardScroll]; });
+      root.style.minHeight = '';
+      if (mainEl) mainEl.scrollTop = keepTop;
+      if (window.scrollY !== keepY) window.scrollTo(0, keepY);
     }
 
     // ── 카테고리(열) 만들기·수정·삭제 ──
     function openCategoryEditModal(key, presetBoard) {
       const c = key ? catByKey(key) : null;
+      rememberBoard(c ? boardOf(c) : presetBoard);
       document.getElementById('catEditKey').value = c ? catKey(c) : '';
       document.getElementById('catEditTitle').textContent = c ? '카테고리 수정' : '새 카테고리';
       document.getElementById('catEditName').value = c ? c.name : '';
@@ -3389,6 +3544,7 @@
 
     // ── 보드 만들기·이름 변경·삭제 ──
     function openBoardModal(board) {
+      if (board) rememberBoard(board);
       document.getElementById('boardEditOrig').value = board || '';
       document.getElementById('boardEditTitle').textContent = board ? '보드 이름 변경' : '새 보드';
       document.getElementById('boardEditName').value = board || '';
@@ -3420,6 +3576,7 @@
     }
 
     function openProtocolModal(editId = null, presetCat = null) {
+      { const pp = editId && state.protocols.find(x => x.id === editId), cc = catByKey(pp ? pp.category : presetCat); if (cc) rememberBoard(boardOf(cc)); }
       const select = document.getElementById('protoCategorySelect');
       select.innerHTML = getBoards().map(b => `<optgroup label="${escapeHtml(b)}">${state.categories.filter(c => boardOf(c) === b).map(c => `<option value="${escapeHtml(catKey(c))}">${escapeHtml(c.name)}</option>`).join('')}</optgroup>`).join('')
         || '<option value="">먼저 카테고리를 만들어 주세요</option>';
@@ -3447,6 +3604,7 @@
       }
 
       document.getElementById('protocolModal').classList.remove('hidden');
+      protoSnapAtOpen = protoSnap();
     }
 
     function onProtocolCategorySelectChange(val) {
@@ -3466,12 +3624,14 @@
     function openProtocolDetailModal(id) {
       const proto = state.protocols.find(p => p.id === id);
       if (!proto) return;
+      { const cc = catByKey(proto.category); if (cc) rememberBoard(boardOf(cc)); }
 
       document.getElementById('activeProtocolDetailId').value = id;
       document.getElementById('detailProtoTitle').innerText = (proto.icon ? proto.icon + ' ' : '') + proto.title;
       document.getElementById('detailProtoNotes').innerHTML = richView(proto.notesHtml, proto.notes);
       document.getElementById('detailProtoSteps').innerHTML = richView(proto.stepsHtml, proto.steps);
       hydrateImages(document.getElementById('detailProtoNotes')); hydrateImages(document.getElementById('detailProtoSteps'));
+      document.getElementById('detailProtoNotes').parentElement.classList.toggle('hidden', !(proto.notes || proto.notesHtml));   // 주의사항이 비어 있으면 칸 자체를 숨김
 
       const catObj = catByKey(proto.category);
       const badge = document.getElementById('detailProtoCatBadge');
@@ -3514,7 +3674,6 @@
       const icon = document.getElementById('protoIconInput').value;
 
       if (!title) return;
-      if (!notes && !/<(img|table)\b/.test(notesHtml)) { uiAlert('주의 및 참고사항을 입력해 주세요.'); rteFocus('protoNotes'); return; }
       if (!steps && !/<(img|table)\b/.test(stepsHtml)) { uiAlert('실험 절차를 입력해 주세요.'); rteFocus('protoSteps'); return; }
       if (!category || !catByKey(category)) { uiAlert('먼저 카테고리를 만들어 주세요. (프로토콜 화면의 "+ 새 카테고리")'); return; }
 
@@ -3621,6 +3780,17 @@
       if (ne <= st) return;
       const endMinSel = document.getElementById('schedEndMin');
       if (![...endMinSel.options].some(o => parseInt(o.value) === ne % 60)) setMinuteMode(true);   // 30분 단위 목록에 없는 분이면 1분 단위로 전환
+      document.getElementById('schedEndHour').value = Math.floor(ne / 60);
+      document.getElementById('schedEndMin').value = ne % 60;
+    }
+
+    // 새 계획을 만들 때는 시작 시간을 바꿀 때마다 종료를 시작 +1시간으로 맞춤 (수정할 때는 종료가 시작보다 앞설 때만 보정)
+    function onStartTimeChange() {
+      if (document.getElementById('schedEditId').value) { fixEndTime(); return; }
+      const g = id => parseInt(document.getElementById(id).value);
+      const st = g('schedStartHour') * 60 + g('schedStartMin'), ne = Math.min(st + 60, 23 * 60 + 59);
+      if (isNaN(st) || ne <= st) return;
+      if (![...document.getElementById('schedEndMin').options].some(o => parseInt(o.value) === ne % 60)) setMinuteMode(true);
       document.getElementById('schedEndHour').value = Math.floor(ne / 60);
       document.getElementById('schedEndMin').value = ne % 60;
     }
@@ -3794,6 +3964,7 @@
       weeklySummaryModal:  { close: () => closeWeeklySummaryModal(), ok: () => copyWeeklySummary() },
       printModal:          { close: () => closePrintModal(), ok: () => doPrintDay() },
       backupModal:         { close: () => closeBackupModal() },
+      protocolPrintModal:  { close: () => closeProtocolPrintModal(), ok: () => doPrintProtocols() },
       quickAddModal:       { close: () => closeQuickAddModal(), ok: () => submitQuickAdd() },
       categoryEditModal:   { form: true, close: () => closeCategoryEditModal(), ok: () => document.querySelector('#categoryEditModal form').requestSubmit(), del: () => deleteCategoryFromModal() },
       boardModal:          { form: true, close: () => closeBoardModal(), ok: () => document.querySelector('#boardModal form').requestSubmit(), del: () => deleteBoardFromModal() },
@@ -5038,6 +5209,57 @@
       return diff === 0 ? 'D-DAY' : diff > 0 ? `D-${diff}` : `D+${-diff}`;
     }
 
+    // 프로토콜 인쇄용 본문 (번호 목록·표·사진 포함). 일정 인쇄와 프로토콜 인쇄가 함께 사용
+    async function protocolPrintBlocks(ids) {
+      let body = '';
+      for (const id of ids) {
+        const p = state.protocols.find(x => x.id === id);
+        if (!p) continue;
+        let steps = p.stepsHtml ? richToLines(p.stepsHtml) : (p.steps || '').split('\n').map(l => l.trim()).filter(Boolean).map(escapeHtml);
+        let noteLines = p.notesHtml ? richToLines(p.notesHtml) : [];
+        steps = await Promise.all(steps.map(attachImageSources));           // 사진은 인쇄용으로 data: 주소를 붙임
+        noteLines = await Promise.all(noteLines.map(attachImageSources));
+        const note = p.notesHtml ? noteLines.join('<br>') : escapeHtml(p.notes || '');
+        body += `<div class="block"><h2>${escapeHtml(p.icon || '🔬')} ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
+          ${(p.notes || p.notesHtml) ? `<div class="note">⚠ ${note}</div>` : ''}
+          ${steps.map(l => l.startsWith('<table') ? `<div class="step-table">${l}</div>` : `<div class="step"><span class="box"></span>${l}</div>`).join('')}
+          ${p.reagents && p.reagents.length ? `<table><tr><th>시약</th><th style="width:28mm">1개당</th><th style="width:34mm">× ___ 개 (총량)</th></tr>
+            ${p.reagents.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${fmtNum(r.amount)} ${r.unit}</td><td></td></tr>`).join('')}</table>` : ''}
+        </div>`;
+      }
+      return body;
+    }
+
+    // ── 프로토콜 인쇄 창: 보드 › 카테고리별로 골라서 인쇄 ──
+    function openProtocolPrintModal(preIds) {
+      const pre = new Set(preIds || []), byOrd = (a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9);
+      document.getElementById('ppList').innerHTML = getBoards().map(b => {
+        const cats = state.categories.filter(c => boardOf(c) === b).map(c => {
+          const ps = state.protocols.filter(p => p.category === catKey(c)).sort(byOrd);
+          return ps.length ? `<div class="pl-3 mt-1"><div class="text-[11px] font-bold text-slate-500">${escapeHtml(c.name)}</div>${ps.map(p => `<label class="flex items-center gap-2 py-0.5 cursor-pointer"><input type="checkbox" class="pp-proto rounded" value="${p.id}" ${pre.has(p.id) ? 'checked' : ''}><span class="truncate">${p.icon ? escapeHtml(p.icon) + ' ' : ''}${escapeHtml(p.title)}</span></label>`).join('')}</div>` : '';
+        }).join('');
+        return cats ? `<div class="mb-2"><div class="text-xs font-black text-slate-700">${escapeHtml(b)}</div>${cats}</div>` : '';
+      }).join('') || '<p class="text-slate-400 px-1 py-1">프로토콜이 없어요.</p>';
+      const fs = document.getElementById('ppFont');
+      if (!fs.options.length) fs.innerHTML = PRINT_FONTS.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+      fs.value = pickPrintFont(state.settings.printFontId).id;
+      document.getElementById('ppScale').value = state.settings.printScale || 100;
+      document.getElementById('ppScaleLabel').textContent = (state.settings.printScale || 100) + '%';
+      document.getElementById('protocolPrintModal').classList.remove('hidden');
+    }
+    function closeProtocolPrintModal() { document.getElementById('protocolPrintModal').classList.add('hidden'); }
+    function ppSelectAll(on) { document.querySelectorAll('.pp-proto').forEach(c => { c.checked = on; }); }
+    async function doPrintProtocols() {
+      const ids = [...document.querySelectorAll('.pp-proto:checked')].map(c => c.value);
+      if (!ids.length) { uiAlert('인쇄할 프로토콜을 선택해 주세요.'); return; }
+      const font = pickPrintFont(document.getElementById('ppFont').value), scalePct = parseInt(document.getElementById('ppScale').value) || 100;
+      state.settings.printFontId = font.id; state.settings.printScale = scalePct; saveLocalStorage();
+      const body = `<h1>Protocol</h1><div class="sub">${getKoreanDateLabel(formatDateString(new Date()))} · ✨🐥🍀 Scheduler</div>` + await protocolPrintBlocks(ids);
+      closeProtocolPrintModal();
+      showToast('인쇄 준비 중', `${font.name} 글꼴을 불러오고 있어요`);
+      printHtml('Protocol', body, buildPrintCss(scalePct / 100, font, state.settings.printGapItem ?? 6, state.settings.printGapSub ?? 2), font);
+    }
+
     async function doPrintDay() {
       const date = document.getElementById('printDateInput').value;
       if (!date) { uiAlert('날짜를 선택해주세요.'); return; }
@@ -5070,21 +5292,7 @@
         }
       }
 
-      for (const id of protoIds) {
-        const p = state.protocols.find(x => x.id === id);
-        if (!p) continue;
-        let steps = p.stepsHtml ? richToLines(p.stepsHtml) : (p.steps || '').split('\n').map(l => l.trim()).filter(Boolean).map(escapeHtml);
-        let noteLines = p.notesHtml ? richToLines(p.notesHtml) : [];
-        steps = await Promise.all(steps.map(attachImageSources));           // 사진은 인쇄용으로 data: 주소를 붙임
-        noteLines = await Promise.all(noteLines.map(attachImageSources));
-        const note = p.notesHtml ? noteLines.join('<br>') : escapeHtml(p.notes || '');
-        body += `<div class="block"><h2>${escapeHtml(p.icon || '🔬')} ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
-          ${(p.notes || p.notesHtml) ? `<div class="note">⚠ ${note}</div>` : ''}
-          ${steps.map(l => l.startsWith('<table') ? `<div class="step-table">${l}</div>` : `<div class="step"><span class="box"></span>${l}</div>`).join('')}
-          ${p.reagents && p.reagents.length ? `<table><tr><th>시약</th><th style="width:28mm">1개당</th><th style="width:34mm">× ___ 개 (총량)</th></tr>
-            ${p.reagents.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${fmtNum(r.amount)} ${r.unit}</td><td></td></tr>`).join('')}</table>` : ''}
-        </div>`;
-      }
+      body += await protocolPrintBlocks(protoIds);
 
       if (includeMemo) {
         body += `<div class="block"><h2>메모</h2>${'<div class="memo-line"></div>'.repeat(8)}</div>`;
@@ -5282,6 +5490,24 @@
       const t = e.target;
       if (t.tagName === 'INPUT' && (!t.type || t.type === 'text') && !t.hasAttribute('autocomplete')) t.setAttribute('autocomplete', 'off');
     });
+
+    // 프로토콜 창: 창 밖(어두운 배경)을 누르면 닫힘. 작성 중인 내용이 있으면 한 번 물어봄
+    const protoSnap = () => JSON.stringify([document.getElementById('protoTitleInput').value, document.getElementById('protoIconInput').value, document.getElementById('protoCategorySelect').value, rteGet('protoNotes'), rteGet('protoSteps'), JSON.stringify(collectReagentRows())]);
+    let protoSnapAtOpen = '';
+    {
+      const closers = {
+        protocolDetailModal: () => closeProtocolDetailModal(),
+        categoryEditModal: () => closeCategoryEditModal(),
+        boardModal: () => closeBoardModal(),
+        protocolPrintModal: () => closeProtocolPrintModal(),
+        protocolModal: async () => { if (protoSnap() !== protoSnapAtOpen && !await uiConfirm('작성 중인 내용이 저장되지 않아요.\n창을 닫을까요?', { danger: true, confirmText: '닫기' })) return; closeProtocolModal(); },
+      };
+      Object.entries(closers).forEach(([id, fn]) => {
+        const el = document.getElementById(id); let down = false;
+        el.addEventListener('pointerdown', e => { down = e.target === el; });
+        el.addEventListener('pointerup', e => { if (down && e.target === el) fn(); down = false; });     // 글자를 드래그하다 밖에서 놓았을 때는 닫지 않음
+      });
+    }
 
     // 확인/알림 창: 브라우저 기본 창 대신 앱 디자인으로 표시 (Enter = 확인 · Esc = 취소)
     function uiDialog({ message, confirmText = '확인', cancelText = '취소', showCancel = true, danger = false }) {
@@ -5699,7 +5925,9 @@
     function sanitizeCategory(c) {
       if (!c || typeof c !== 'object' || typeof c.name !== 'string' || !c.name.trim() || c.name.length > 60) return null;
       if (c.id !== undefined && !isSafeId(c.id)) return null;
-      return { ...c, color: BACKUP_COLOR_RE.test(c.color) ? c.color : '#bae1ff', ...(typeof c.board === 'string' ? { board: c.board.slice(0, 40) } : {}) };
+      const q = { ...c, color: BACKUP_COLOR_RE.test(c.color) ? c.color : '#bae1ff', ...(typeof c.board === 'string' ? { board: c.board.slice(0, 40) } : {}) };
+      if (!Number.isInteger(q.boardOrder) || q.boardOrder < 0 || q.boardOrder >= 1000) delete q.boardOrder;
+      return q;
     }
     function sanitizePlate(p) {
       if (!p || typeof p !== 'object' || !isSafeId(p.id)) return null;
