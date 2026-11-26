@@ -2864,8 +2864,7 @@
     const plainToHtml = t => escapeHtml(t || '').replace(/\n/g, '<br>');
     const rteHasFormat = h => /<(b|strong|i|em|u|s|strike|span|ul|ol|li|h[1-3]|sub|sup|table|img)\b/i.test(h || '');
     // 서식 HTML → 줄 단위 HTML 조각들 (인쇄·일반 글자 추출용). 목록은 번호/점을 붙여 줘요.
-    // keepBlank=true 이면 비어 있는 줄('')도 그대로 돌려줘서 인쇄할 때 줄 간격을 보존함 (앞뒤의 빈 줄은 제외)
-    function richToLines(html, keepBlank = false) {
+    function richToLines(html) {
       const root = document.createElement('div');
       root.innerHTML = sanitizeRich(html);
       const lines = []; let cur = '';
@@ -2875,11 +2874,7 @@
         if (n.nodeType === 3) { cur += escapeHtml(n.textContent); return; }
         if (n.nodeType !== 1) return;
         const t = n.tagName;
-        if (t === 'BR') {
-          if (keepBlank && !hasContent(cur)) { const pv = n.previousElementSibling; if (!(pv && /^(TABLE|UL|OL)$/.test(pv.tagName))) lines.push(''); }   // 내용 없이 줄바꿈만 있으면 빈 줄 (표·목록 바로 뒤의 줄바꿈은 제외)
-          else flush();
-          return;
-        }
+        if (t === 'BR') { flush(); return; }
         if (t === 'IMG') { cur += `<img data-img="${n.getAttribute('data-img')}" style="${escapeHtml(n.getAttribute('style') || '')}">`; return; }
         if (t === 'TABLE') { flush(); lines.push(n.outerHTML); return; }          // 표는 통째로 한 덩어리
         if (t === 'UL' || t === 'OL') {
@@ -2892,17 +2887,15 @@
         cur += `<${tg}${sty ? ` style="${escapeHtml(sty)}"` : ''}>`; walk(n); cur += `</${tg}>`;
       });
       walk(root); flush();
-      if (keepBlank) { while (lines.length && lines[0] === '') lines.shift(); while (lines.length && lines[lines.length - 1] === '') lines.pop(); }
       return lines;
     }
-    function richToText(html) {                                         // 일반 글자 버전: 줄바꿈으로 띄운 빈 줄도 그대로 보존
+    function richToText(html) {
       const tmp = document.createElement('div');
-      return richToLines(html, true).map(l => {
-        if (l === '') return '';
+      return richToLines(html).map(l => {
         tmp.innerHTML = l;
         if (l.startsWith('<table')) return [...tmp.querySelectorAll('tr')].map(tr => [...tr.children].map(c => c.textContent.trim()).join(' | ')).join('\n');
         return tmp.textContent;
-      }).join('\n');
+      }).filter(t => t.trim()).join('\n');
     }
     const richView = (html, plain) => html ? sanitizeRich(html) : plainToHtml(plain);
 
@@ -5105,7 +5098,6 @@
       .snum { display: inline-block; min-width: 16px; color: #64748b; }
       .step img, .note img { max-width: 100%; height: auto; display: block; margin: 4px 0; }
       .step-table { margin: 4px 0 4px 18px; }
-      .step-gap { height: 11pt; }
       td, th { overflow-wrap: anywhere; }
       .tag { font-size: 7.5pt; border: 1px solid #ef4444; color: #ef4444; padding: 0 4px; border-radius: 3px; margin-left: 6px; }
       .cat { font-size: 8pt; font-weight: normal; color: #64748b; margin-left: 6px; }
@@ -5234,14 +5226,14 @@
       for (const id of ids) {
         const p = state.protocols.find(x => x.id === id);
         if (!p) continue;
-        let steps = p.stepsHtml ? richToLines(p.stepsHtml, true) : (p.steps || '').trim().split('\n').map(l => escapeHtml(l.trim()));     // 줄바꿈으로 띄운 빈 줄도 그대로
-        let noteLines = p.notesHtml ? richToLines(p.notesHtml, true) : [];
+        let steps = p.stepsHtml ? richToLines(p.stepsHtml) : (p.steps || '').split('\n').map(l => l.trim()).filter(Boolean).map(escapeHtml);
+        let noteLines = p.notesHtml ? richToLines(p.notesHtml) : [];
         steps = await Promise.all(steps.map(attachImageSources));           // 사진은 인쇄용으로 data: 주소를 붙임
         noteLines = await Promise.all(noteLines.map(attachImageSources));
         const note = p.notesHtml ? noteLines.join('<br>') : escapeHtml(p.notes || '');
         body += `<div class="block"><h2>${escapeHtml(p.icon || '🔬')} ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
           ${(p.notes || p.notesHtml) ? `<div class="note">${note}</div>` : ''}
-          ${steps.map(l => l === '' ? '<div class="step-gap"></div>' : l.startsWith('<table') ? `<div class="step-table">${l}</div>` : `<div class="step">${l}</div>`).join('')}
+          ${steps.map(l => l.startsWith('<table') ? `<div class="step-table">${l}</div>` : `<div class="step">${l}</div>`).join('')}
           ${p.reagents && p.reagents.length ? `<table><tr><th>시약</th><th style="width:28mm">1개당</th><th style="width:34mm">× ___ 개 (총량)</th></tr>
             ${p.reagents.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${fmtNum(r.amount)} ${r.unit}</td><td></td></tr>`).join('')}</table>` : ''}
         </div>`;
