@@ -2599,7 +2599,7 @@
     //  - 'card': Weekly To Do List 카드 (다른 날/오전·오후로 옮기기는 카드 자체를 끌기)
     //  - 'sub' : 카드 안의 세부 계획,  'row': 일정 등록·수정 창의 세부 항목 입력칸
     let reorder = null;
-    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row', print: '.print-plan-row', proto: '[data-proto-id]', board: '[data-board-sec]' };
+    const REORDER_SEL = { card: '[data-card-id]', sub: '[data-sub-id]', row: '.sub-task-input-row', print: '.print-plan-row', proto: '[data-proto-id]', board: '[data-board-sec]', col: '[data-col-box]' };
     function startReorder(e, handle, kind = 'card') {
       if (e.button !== undefined && e.button !== 0) return;
       const sel = REORDER_SEL[kind], item = handle.closest(sel);
@@ -2619,6 +2619,10 @@
       e.preventDefault();
       const { item, list, sel } = reorder;
       const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (reorder.kind === 'col') {                                              // 보드가 화면보다 넓으면 가장자리에서 자동으로 가로 스크롤
+        const r = list.getBoundingClientRect();
+        if (e.clientX < r.left + 40) list.scrollLeft -= 24; else if (e.clientX > r.right - 40) list.scrollLeft += 24;
+      }
       if (reorder.kind === 'proto') {                                            // 프로토콜 카드: 다른 카테고리 열로도 이동 가능
         if (!el) return;
         const tgt = el.closest('[data-proto-id]');
@@ -2646,6 +2650,11 @@
       if (host) host.draggable = true;
       item.style.opacity = ''; item.style.outline = '';
       const now = [...list.children];
+      if (kind === 'col') {                                             // 카테고리 열 순서: 카테고리마다 colOrder 저장 (동기화됨)
+        if (now.every((c, i) => c === before[i])) return;
+        now.filter(c => c.dataset.colKey).forEach((c, i) => { const cat = catByKey(c.dataset.colKey); if (cat) cat.colOrder = i; });
+        saveLocalStorage(); renderAll(); return;
+      }
       if (kind === 'board') {                                           // 보드 순서: 카테고리마다 boardOrder 저장 (동기화됨)
         if (now.every((c, i) => c === before[i])) return;
         now.map(c => c.dataset.boardSec).forEach((name, i) => { state.categories.forEach(c => { if (boardOf(c) === name) c.boardOrder = i; }); });
@@ -3422,6 +3431,7 @@
       state.categories.forEach((c, i) => { const b = boardOf(c), o = c.boardOrder ?? 1e6, cur = seen.get(b); if (!cur) seen.set(b, { b, o, i }); else cur.o = Math.min(cur.o, o); });
       return [...seen.values()].sort((x, y) => x.o - y.o || x.i - y.i).map(x => x.b);
     };
+    const boardCats = board => state.categories.filter(c => boardOf(c) === board).sort((a, b) => (a.colOrder ?? 1e6) - (b.colOrder ?? 1e6));   // 보드 안의 카테고리 열 순서 (끌어서 정한 순서, 없으면 만든 순서)
     const boardProtocolIds = board => { const keys = new Set(state.categories.filter(c => boardOf(c) === board).map(catKey)); return state.protocols.filter(p => keys.has(p.category)).map(p => p.id); };
     const tint = hex => /^#[0-9a-fA-F]{6}$/.test(hex) ? hex + '33' : '#f1f5f9';
     const newCatId = () => 'cat_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -3432,9 +3442,10 @@
       const key = catKey(cat);
       const cards = state.protocols.filter(p => p.category === key).sort((a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9));
       return `
-        <div data-col-box class="w-[260px] flex-shrink-0 rounded-2xl p-2.5" style="background-color: ${tint(cat.color)}">
+        <div data-col-box data-col-key="${escapeHtml(key)}" class="w-[260px] flex-shrink-0 rounded-2xl p-2.5" style="background-color: ${tint(cat.color)}">
           <div class="flex items-center justify-between px-1 mb-2">
             <div class="flex items-center gap-1.5 min-w-0">
+              <span onpointerdown="startReorder(event, this, 'col')" title="끌어서 카테고리 순서 바꾸기" class="text-slate-400 hover:text-slate-600 cursor-grab select-none flex-shrink-0" style="touch-action:none;min-width:12px;min-height:20px;display:inline-flex;align-items:center;justify-content:center"><i class="fa-solid fa-grip-vertical text-[10px]"></i></span>
               <span class="px-2 py-0.5 rounded-md text-[11px] font-bold truncate border border-black/10" style="background-color: ${escapeHtml(cat.color)}">${escapeHtml(cat.name)}</span>
               <span class="text-[11px] text-slate-500">${cards.length}</span>
             </div>
@@ -3473,7 +3484,7 @@
         return;
       }
       boards.forEach(board => {
-        const cats = state.categories.filter(c => boardOf(c) === board);
+        const cats = boardCats(board);
         const total = state.protocols.filter(p => cats.some(c => catKey(c) === p.category)).length;
         const sec = document.createElement('div');
         sec.className = 'space-y-3';
@@ -5221,8 +5232,8 @@
         noteLines = await Promise.all(noteLines.map(attachImageSources));
         const note = p.notesHtml ? noteLines.join('<br>') : escapeHtml(p.notes || '');
         body += `<div class="block"><h2>${escapeHtml(p.icon || '🔬')} ${escapeHtml(p.title)}<span class="cat">${escapeHtml(catName(p.category))}</span></h2>
-          ${(p.notes || p.notesHtml) ? `<div class="note">⚠ ${note}</div>` : ''}
-          ${steps.map(l => l.startsWith('<table') ? `<div class="step-table">${l}</div>` : `<div class="step"><span class="box"></span>${l}</div>`).join('')}
+          ${(p.notes || p.notesHtml) ? `<div class="note">${note}</div>` : ''}
+          ${steps.map(l => l.startsWith('<table') ? `<div class="step-table">${l}</div>` : `<div class="step">${l}</div>`).join('')}
           ${p.reagents && p.reagents.length ? `<table><tr><th>시약</th><th style="width:28mm">1개당</th><th style="width:34mm">× ___ 개 (총량)</th></tr>
             ${p.reagents.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${fmtNum(r.amount)} ${r.unit}</td><td></td></tr>`).join('')}</table>` : ''}
         </div>`;
@@ -5234,7 +5245,7 @@
     function openProtocolPrintModal(preIds) {
       const pre = new Set(preIds || []), byOrd = (a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9);
       document.getElementById('ppList').innerHTML = getBoards().map(b => {
-        const cats = state.categories.filter(c => boardOf(c) === b).map(c => {
+        const cats = boardCats(b).map(c => {
           const ps = state.protocols.filter(p => p.category === catKey(c)).sort(byOrd);
           return ps.length ? `<div class="pl-3 mt-1"><div class="text-[11px] font-bold text-slate-500">${escapeHtml(c.name)}</div>${ps.map(p => `<label class="flex items-center gap-2 py-0.5 cursor-pointer"><input type="checkbox" class="pp-proto rounded" value="${p.id}" ${pre.has(p.id) ? 'checked' : ''}><span class="truncate">${p.icon ? escapeHtml(p.icon) + ' ' : ''}${escapeHtml(p.title)}</span></label>`).join('')}</div>` : '';
         }).join('');
@@ -5927,6 +5938,7 @@
       if (c.id !== undefined && !isSafeId(c.id)) return null;
       const q = { ...c, color: BACKUP_COLOR_RE.test(c.color) ? c.color : '#bae1ff', ...(typeof c.board === 'string' ? { board: c.board.slice(0, 40) } : {}) };
       if (!Number.isInteger(q.boardOrder) || q.boardOrder < 0 || q.boardOrder >= 1000) delete q.boardOrder;
+      if (!Number.isInteger(q.colOrder) || q.colOrder < 0 || q.colOrder >= 1000) delete q.colOrder;
       return q;
     }
     function sanitizePlate(p) {
